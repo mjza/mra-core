@@ -1,0 +1,61 @@
+name: Tag After Heroku Deployment
+
+on:
+    workflow_dispatch:
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+
+    env:
+        HEROKU_APP_NAME: mra-authentication
+        HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install Heroku CLI
+      id: install-heroku-cli
+      run: |
+        curl https://cli-assets.heroku.com/install.sh | sh
+
+    - name: Check Heroku Deployment Status
+      id: check-status
+      run: |
+        # Check app status
+        # This is a basic script to check the status. Adjust as necessary for your app.
+        MAX_ATTEMPTS=30
+        for ((i=1;i<=MAX_ATTEMPTS;i++)); do
+          STATUS=$(heroku ps -a $HEROKU_APP_NAME | grep 'web.1: up')
+          if [ ! -z "$STATUS" ]; then
+            echo "Deployment successful"
+            break
+          fi
+          if [ $i -eq $MAX_ATTEMPTS ]; then
+            echo "Deployment check failed" >&2
+            exit 1
+          fi
+          sleep 10
+        done        
+
+    - name: Check Deployment and Get Version from Heroku
+      id: heroku
+      if: steps.check-status.outcome == 'success'
+      run: |
+        # Retrieve the version number
+        HEROKU_VERSION=$(heroku releases -a $HEROKU_APP_NAME | sed -n '2p' | awk '{print $1}')
+        echo "Heroku Version: $HEROKU_VERSION"
+        echo "HEROKU_VERSION=$HEROKU_VERSION" >> $GITHUB_ENV
+
+    - name: Tag the commit
+      if: steps.check-status.outcome == 'success' && env.HEROKU_VERSION
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.MY_PAT }}
+        script: |
+          await github.rest.git.createRef({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            ref: 'refs/tags/${{ env.HEROKU_VERSION }}',
+            sha: context.sha
+          })
