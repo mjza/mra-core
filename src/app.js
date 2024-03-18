@@ -9,6 +9,7 @@ const cors = require('cors');
 const basicAuth = require('express-basic-auth');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJSDoc = require('swagger-jsdoc');
+const { casbinMiddleware } = require('./casbin/casbinSingleton');
 
 const app = express();
 
@@ -52,11 +53,13 @@ app.use(helmet.noSniff()); // It prevents browsers from trying to guess (“snif
 // X-Frame-Options
 app.use(helmet.frameguard({ action: 'deny' })); // It instructs the browser to prevent any framing of the site, which can help protect against clickjacking attacks.
 
+// Use this middleware before any route definitions
+app.use(casbinMiddleware);
 
 // Import routes
-const v1AuthRoutes = require('./routes/v1/authRoutes');
+const v1Routes = require('./routes/v1/routes');
 // Use routes
-app.use('/v1', v1AuthRoutes);
+app.use('/v1', v1Routes);
 
 // Swagger definition
 const swaggerDefinition = {
@@ -99,7 +102,7 @@ const v1SwaggerSpec = swaggerJSDoc(v1SwaggerOptions);
 if (typeof process.env.DOC_USER === 'undefined' || typeof process.env.DOC_PASS === 'undefined') {
     console.error('Environment variable DOC_USER or DOC_PASS is not defined.');
     // Handle the error appropriately, e.g., exit the process or throw an error
-    if(process.env.NODE_ENV !== 'test')
+    if (process.env.NODE_ENV !== 'test')
         process.exit(1); // Exits the application with an error code
 }
 

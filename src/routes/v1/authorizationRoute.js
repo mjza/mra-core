@@ -2,10 +2,6 @@ const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../../utils/validations');
 
-async function isAuthorized(user, action, resourceId) {
-    return true;
-}
-
 /**
  * @swagger
  * components:
@@ -13,24 +9,37 @@ async function isAuthorized(user, action, resourceId) {
  *     Authorization:
  *       type: object
  *       required:
- *         - action
- *         - resourceId
+ *         - dom
+ *         - obj
+ *         - act
  *       properties:
- *         action:
+ *         dom:
  *           type: string
- *           description: The action user is trying to perform
- *         resourceId:
- *           type: integer
- *           description: The ID of the resource user is trying to access
+ *           description: The domain (e.g., customer ID) within which the action is being attempted
+ *         obj:
+ *           type: string
+ *           description: The object or resource the user is trying to access
+ *         act:
+ *           type: string
+ *           description: The action the user is trying to perform on the object
  */
 async function authorize(req, res, next) {
-    const { action, resourceId } = req.body; // action example: 'read', 'edit'
-    const user = req.user;
-    // Implement your logic here based on your users, customers, and employee data.
-    // This might involve checking the user's role, and if they're allowed to perform the action on the resourceId.
-    // For simplicity, this example assumes you have a function `isAuthorized` that checks permissions.
-    const authorized = await isAuthorized(user, action, resourceId);
-    if (!authorized) return res.sendStatus(403);
+    // Extract dom, obj, and act directly from the request body
+    const { dom, obj, act } = req.body;
+
+    // Extract the subject from the authenticated user information
+    // The `req.user` contains sufficient info to identify the subject, like a username or userId
+    const sub = req.user.username;
+
+    // Extract the Casbin enforcer from req
+    const enforcer = req.enforcer;
+    // Perform the authorization check with Casbin
+    // This assumes you have access to the Casbin enforcer instance (`enforcer`) here
+    const authorized = await enforcer.enforce(sub, dom, obj, act);
+
+    if (!authorized) {
+        return res.status(403).json({ message: 'User is not authorized.' });
+    }
     next();
 }
 
@@ -66,15 +75,8 @@ async function authorize(req, res, next) {
  *       500:
  *         $ref: '#/components/responses/ServerInternalError'
  */
-router.post('/authorize', authenticateToken, authorize, (req, res) => {
-
-    const authorized = true;
-
-    if (authorized) {
-        res.json({ message: 'User is authorized.' });
-    } else {
-        res.status(403).json({ message: 'User is not authorized.' });
-    }
+router.post('/authorize', authenticateToken, authorize, (req, res) => {    
+    res.json({ message: 'User is authorized.' });
 });
 
 module.exports = router;

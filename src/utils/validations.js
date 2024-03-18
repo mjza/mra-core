@@ -38,7 +38,8 @@ const authenticateToken = async (req, res, next) => {
                 Authorization: authHeader
             }
         });
-        req.user = response.data;
+        const { userId, username, email } = response.data;  
+        req.user = { userId, username, email };
         next();
     } catch (error) {
         if (error.response) {
