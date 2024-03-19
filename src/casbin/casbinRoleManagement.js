@@ -38,6 +38,7 @@ async function importPoliciesFromCSV(enforcer, csvFilePath) {
     parse(csvContent, {
       from_line: 2, // Skip the header row
       skip_empty_lines: true,
+      delimiter: ";"
     }, (err, output) => {
       if (err) reject(err);
       else resolve(output);
@@ -45,8 +46,8 @@ async function importPoliciesFromCSV(enforcer, csvFilePath) {
   });
 
   for (const record of records) {
-    const [sub, dom, obj, act, cond, eft] = record;
-    const policy = [sub, dom, obj, act, cond, eft].filter(v => v !== undefined);
+    const [sub, dom, obj, act, cond, attrs, eft] = record;
+    const policy = [sub, dom, obj, act, cond, attrs, eft].filter(v => v !== undefined);
     await enforcer.addPolicy(...policy);
   }
   await enforcer.savePolicy();

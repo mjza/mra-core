@@ -52,7 +52,6 @@ Here is meaning of each permission code:
 7.	**COROUODO**: Only the user with the id of the owner can write or read
 8.	**C\*R\*U\*D\***: Can read or write limited rows or under specific conditions (e.g., if row is related to the customer that user belongs to)
 	
-
 Please note that some data do not belong to an specific user, they belong to the customer. 
 So, only users which belongs to that customer (mra_user_customers) with roles with permission W can write the rows that belong to that customer (customer_id).
 
@@ -66,11 +65,18 @@ Please note that I have an authentication microservice and users must login firs
 
 Please note that one user can have multiple roles and I want to add roles to their user_id programatically.
 
-I have defined the permissions based on the tables also. It seems we need ABAC for W*R* or R* or RO or WORO and we need RBAC for others.  
+I have defined the permissions based on the tables also. It seems we need ABAC for W\*R\* or R\* or RO or WORO and we need RBAC for others.  
 
+If users of a role can grant their permission you can use a prefix `G`. For example `GC*`. Please note that users cannot grant an ownership permission to someone else. So we don't have `GRO`.  
 
+# Add attributes
+We support a JSON object as attributes for each set of prmission code.
+For example, you can have **CUD{"age": 30}**.
+To support the attributes JSON the separator has changed to semicolon.  
 
-# Convert Role.xlsx to policy.csv
+# Convert Role.csv to policy.csv
+
+First make a `Roles.csv` file. This file does not have some redundent columns.
 
 ## Install libraries
 
@@ -80,6 +86,5 @@ pip install pandas
 
 ## Run the program
 
-1. First make a `Roles.csv` file. This file does not have some redundent columns.
-2. Run `python convertor.py` to generate `policy.csv` file. 
-3. Move the `policy.csv` to './config' folder.
+1. Run `python convertor.py` to generate `policy.csv` file. 
+2. Move the `policy.csv` to './config' folder.
