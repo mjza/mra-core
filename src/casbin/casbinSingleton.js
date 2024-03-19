@@ -32,11 +32,18 @@ async function initCasbin() {
 
 let enforcerPromiseInstance;
 
-function casbinMiddleware(req, res, next) {
+async function setupCasbinMiddleware() {
   if (!enforcerPromiseInstance) {
     enforcerPromiseInstance = (async () => {
       return await initCasbin();
     })();
+  }
+}
+
+function casbinMiddleware(req, res, next) {
+  if (!enforcerInstance) {
+    console.error('Casbin enforcer is not initialized. Call setupCasbinMiddleware before using this method.');
+    return res.status(500).send('Internal Server Error');
   }
 
   enforcerPromiseInstance.then(enforcer => {
@@ -45,4 +52,4 @@ function casbinMiddleware(req, res, next) {
   }).catch(next);
 }
 
-module.exports = { casbinMiddleware };
+module.exports = { setupCasbinMiddleware, casbinMiddleware };

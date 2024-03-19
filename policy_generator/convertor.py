@@ -8,16 +8,29 @@ def permission_to_policy_actions_and_conditions(permission_code, table, role):
     actions = ["C", "R", "U", "D"]
     domain = '0' # General doamin is used for all customers
     policies = []
-    
+    effect = "allow"
     for action in actions:
-        if action in permission_code:
-            effect = "allow"
+        if action in permission_code: 
+            # Direct policies           
             condition = "none"
             if f"{action}O" in permission_code:
                 condition = "check_ownership"
             elif f"{action}*" in permission_code:
                 condition = "check_relationship"        
             policies.append((role, domain, table, action, condition, effect))
+            # Grant policies
+            condition = "none"
+            grant = False
+            if f"G{action}O" in permission_code:
+                grant = False
+                print(f"Meaningless code => permission code: {permission_code}, table: {table}, role: {role}")
+            elif f"G{action}*" in permission_code:
+                grant = True
+                condition = "check_relationship"    
+            elif f"G{action}" in permission_code:
+                grant = True             
+            if grant:           
+                policies.append((role, domain, table, f"G{action}", condition, effect))
     
     return policies
 
