@@ -37,14 +37,14 @@ async function initCasbin() {
   await importPoliciesFromCSV(enforcer, csvFilePath);
 
   // Add custom functions to Casbin's function map
-  enforcer.addFunction('customeEval', (req, pol) => {
+  enforcer.addFunction('customeEval', (r_sub, r_dom, r_obj, r_act, r_attrs, p_sub, p_dom, p_obj, p_act, p_cond, p_attrs) => {
     // Convert Casbin FunctionCall arguments to JavaScript objects
-    const request = JSON.parse(req.toString());
-    const policy = JSON.parse(pol.toString());
+    const request = {sub: r_sub, dom: r_dom, obj: r_obj, act: r_act, attrs: r_attrs};
+    const policy = {sub: p_sub, dom: p_dom, obj: p_obj, act: p_act, cond: p_cond, attrs: p_attrs};
     return customeEval(request, policy);
   });
 
-  await addRoleForUserInDomain(enforcer, 'username1', 'superdata', '0'); // TODO remove it.
+  await addRoleForUserInDomain(enforcer, 'username1', 'admin', '0'); // TODO remove it.
 
   return enforcer;
 }
@@ -98,7 +98,7 @@ async function setupCasbinMiddleware() {
  * @param {import('express').NextFunction} next - The next function in the middleware chain.
  */
 function casbinMiddleware(req, res, next) {
-  if (!enforcerInstance) {
+  if (!enforcerPromiseInstance) {
     console.error('Casbin enforcer is not initialized. Call setupCasbinMiddleware before using this method.');
     return res.status(500).send('Internal Server Error');
   }

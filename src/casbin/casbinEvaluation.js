@@ -7,7 +7,7 @@ const { checkRelationship } = require('./casbinRelationship');
  * @param {Object} p - The policy object containing sub, dom, obj, act, cond, attrs, and eft.
  * @returns {boolean} - True if the request satisfies the policy's conditions and attributes, false otherwise.
  */
-function customeEval(r, p) {
+async function customeEval(r, p) {
     // Evaluate dynamic conditions
     if (p.cond !== 'none') {
         const conditionResult = evalDynamicCondition(r, p.cond);
@@ -32,9 +32,9 @@ function customeEval(r, p) {
 function evalDynamicCondition(r, condition) {
     // Implement your logic here based on the condition
     // Example:
-    if (condition === 'checkOwnership') {
+    if (condition === 'check_ownership') {
         return checkOwnership(r.sub, r.dom, r.obj, r.attrs); // Implement checkOwnership accordingly
-    } else if (condition === 'checkRelationship') {
+    } else if (condition === 'check_relationship') {
         return checkRelationship(r.sub, r.dom, r.obj, r.attrs); // Implement checkRelationship accordingly
     }
     // Add more condition cases as needed

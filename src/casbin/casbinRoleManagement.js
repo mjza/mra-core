@@ -36,7 +36,7 @@ async function importPoliciesFromCSV(enforcer, csvFilePath) {
   // Convert the parse call to be promise-based for proper async handling
   const records = await new Promise((resolve, reject) => {
     parse(csvContent, {
-      from_line: 2, // Skip the header row
+      from_line: 3, // Skip the header row and seprator line
       skip_empty_lines: true,
       delimiter: ";"
     }, (err, output) => {

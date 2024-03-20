@@ -5,13 +5,14 @@ const { authenticateToken } = require('../../utils/validations');
 /**
  * @swagger
  * components:
- *   schemas:
+ *   requests:
  *     Authorization:
  *       type: object
  *       required:
  *         - dom
  *         - obj
  *         - act
+ *         - attrs
  *       properties:
  *         dom:
  *           type: string
@@ -22,25 +23,33 @@ const { authenticateToken } = require('../../utils/validations');
  *         act:
  *           type: string
  *           description: The action the user is trying to perform on the object
+ *         attrs:
+ *           type: object
+ *           description: Additional attributes relevant to the authorization context
  */
 async function authorize(req, res, next) {
-    // Extract dom, obj, and act directly from the request body
-    const { dom, obj, act } = req.body;
+    try {
+        // Extract dom, obj, and act directly from the request body
+        const { dom, obj, act, attrs } = req.body;
 
-    // Extract the subject from the authenticated user information
-    // The `req.user` contains sufficient info to identify the subject, like a username or userId
-    const sub = req.user.username;
+        // Extract the subject from the authenticated user information
+        // The `req.user` contains sufficient info to identify the subject, like a username or userId
+        const sub = req.user.username;
 
-    // Extract the Casbin enforcer from req
-    const enforcer = req.enforcer;
-    // Perform the authorization check with Casbin
-    // This assumes you have access to the Casbin enforcer instance (`enforcer`) here
-    const authorized = await enforcer.enforce(sub, dom, obj, act);
+        // Extract the Casbin enforcer from req
+        const enforcer = req.enforcer;
+        // Perform the authorization check with Casbin
+        // This assumes you have access to the Casbin enforcer instance (`enforcer`) here
+        const authorized = await enforcer.enforce(sub, dom, obj, act, attrs);
 
-    if (!authorized) {
-        return res.status(403).json({ message: 'User is not authorized.' });
+        if (!authorized) {
+            return res.status(403).json({ message: 'User is not authorized.' });
+        }
+        next();
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'An error occurred while processing your request.' });
     }
-    next();
 }
 
 /**
@@ -56,7 +65,7 @@ async function authorize(req, res, next) {
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Authorization'
+ *             $ref: '#/components/requests/Authorization'
  *     responses:
  *       200:
  *         description: Authorized successfully
@@ -75,7 +84,7 @@ async function authorize(req, res, next) {
  *       500:
  *         $ref: '#/components/responses/ServerInternalError'
  */
-router.post('/authorize', authenticateToken, authorize, (req, res) => {    
+router.post('/authorize', authenticateToken, authorize, (req, res) => {
     res.json({ message: 'User is authorized.' });
 });
 

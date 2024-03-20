@@ -1,4 +1,5 @@
-﻿Tables;Owner;Systesm;super;superdata;devhead;developer;saleshead;sales;support;admin;admindata;officer;agent;enduser;public
+﻿sep=;
+Tables;Owner;Systesm;super;superdata;devhead;developer;saleshead;sales;support;admin;admindata;officer;agent;enduser;public
 mra_audit_logs_authentication;SYS;CRUD;R;R;R;R;N;N;N;N;N;N;N;N;N
 mra_token_blacklist;SYS;CRUD;R;R;R;R;N;N;N;N;N;N;N;N;N
 mra_countries;SYS;CRUD;CRUD;CRUD;R;R;R;R;R;R;R;R;R;R;N
