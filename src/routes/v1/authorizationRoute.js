@@ -1,7 +1,7 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
+const { recordErrorLog } = require('./authenticateTokenAndLogMiddleware');
 const router = express.Router();
-const { authenticateToken } = require('../../utils/validations');
 
 /**
  * Middleware array for validating authorization request parameters.
@@ -25,6 +25,7 @@ const validateAuthorizationRequest = [
     (req, res, next) => {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
+            recordErrorLog(req, errors);
             return res.status(400).json({ errors: errors.array() });
         }
         next();
@@ -104,12 +105,16 @@ async function authorize(req, res, next) {
         const authorized = await enforcer.enforce(sub, dom, obj, act, attrs);
 
         if (!authorized) {
-            return res.status(403).json({ message: 'User is not authorized.' });
+            let  message = 'User is not authorized.';
+            recordErrorLog(req, { error: message });
+            return res.status(403).json({ message });
         }
         next();
     } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'An error occurred while processing your request.' });
+        let message = 'An error occurred while processing your request.'
+        recordErrorLog(req, message);
+        recordErrorLog(req, error);
+        return res.status(500).json({ message });
     }
 }
 
@@ -148,7 +153,7 @@ async function authorize(req, res, next) {
  *       500:
  *         $ref: '#/components/responses/ServerInternalError'
  */
-router.post('/authorize', authenticateToken, validateAuthorizationRequest, authorize, (req, res) => {
+router.post('/authorize', validateAuthorizationRequest, authorize, (req, res) => {
     res.json({ user: req.user });
 });
 
