@@ -45,6 +45,7 @@ async function initCasbin() {
   });
 
   await addRoleForUserInDomain(enforcer, 'username1', 'admin', '0'); // TODO remove it.
+  await addRoleForUserInDomain(enforcer, 'username1', 'enduser', '0'); // TODO remove it.
 
   return enforcer;
 }
