@@ -1,13 +1,13 @@
 const express = require('express');
 const router = express.Router();
 
-const { authenticateTokenAndLogMiddleware } = require('./authenticateTokenAndLogMiddleware');
-const authorizationRoute = require('./authorizationRoute');
+const { auditLogMiddleware } = require('./auditLogMiddleware');
+
 
 //To automatically apply the auditLogMiddleware to all routes, We must place the middleware function before any route definitions
-router.use(authenticateTokenAndLogMiddleware);
+router.use(auditLogMiddleware);
 
-router.use(authorizationRoute);
+
 
 module.exports = router;
 

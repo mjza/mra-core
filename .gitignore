@@ -1,5 +1,6 @@
 # Logs
-logs
+logs/*
+!logs/README.md
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -74,10 +75,7 @@ web_modules/
 
 # dotenv environment variable files
 .env
-.env.development.local
-.env.test.local
-.env.production.local
-.env.local
+!template.env
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
@@ -129,4 +127,5 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
-config/.env.development
+# auto generated documents
+docs/

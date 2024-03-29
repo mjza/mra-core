@@ -1,19 +1,4 @@
-const { Pool } = require('pg');
-
-// Use environment variables to configure the database connection
-const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME,
-  password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT,
-  ssl: process.env.NODE_ENV === 'development' ? false : {
-    rejectUnauthorized: false
-  }
-});
-
-const logsTable = process.env.LOGS_TABLE;
-const usersTable = process.env.USERS_TABLE;
+const { MraAuditLogsCore, closeSequelize, Sequelize } = require('../models');
 
 /**
  * Inserts a new audit log into the database.
@@ -23,9 +8,14 @@ const usersTable = process.env.USERS_TABLE;
  */
 const insertAuditLog = async (log) => {
   const { methodRoute, req, comments, ipAddress, userId } = log;
-  const query = `INSERT INTO ${logsTable} (method_route, req, ip_address, comments, user_id) VALUES ($1, $2, $3, COALESCE($4, ''), $5) RETURNING *`;
-  const { rows } = await pool.query(query, [methodRoute, req, ipAddress, comments, userId]);
-  return rows[0];
+  const insertedLog = await MraAuditLogsCore.create({
+    method_route: methodRoute,
+    req,
+    ip_address: ipAddress,
+    comments: comments || '',
+    user_id: userId,
+  });
+  return insertedLog && insertedLog.get({ plain: true });;
 };
 
 /**
@@ -38,9 +28,16 @@ const updateAuditLog = async (log) => {
   const { logId, comments } = log;
   if (isNaN(logId))
     return null;
-  const query = `UPDATE ${logsTable} SET comments = $1 WHERE log_id = $2 RETURNING log_id, comments`;
-  const { rows } = await pool.query(query, [comments, logId]);
-  return rows[0];
+  const [updateCount, updatedLogs] = await MraAuditLogsCore.update({
+    comments: comments,
+  }, {
+    where: {
+      log_id: logId
+    },
+    returning: true,
+  });
+
+  return updateCount === 0 ? null : updatedLogs[0];
 };
 
 /**
@@ -52,22 +49,31 @@ const updateAuditLog = async (log) => {
 const deleteAuditLog = async (logId) => {
   if (isNaN(logId))
     return { success: false };
-  const query = `DELETE FROM ${logsTable} WHERE method_route LIKE 'TEST %' AND log_id = $1`;
-  const result = await pool.query(query, [logId]);
-  return { success: result.rowCount > 0 };
+
+  const deleteCount = await MraAuditLogsCore.destroy({
+    where: {
+      method_route: {
+        [Sequelize.Op.like]: 'TEST %',
+      },
+      log_id: logId
+    }
+  });
+  return { success: deleteCount > 0 };
 };
+
 
 
 /**
  * Closes the database connection pool.
  */
-const closePool = async () => {
-  await pool.end();
+const closeDBConnections = async () => {
+  await closeSequelize();
 };
+
 
 module.exports = {
   insertAuditLog,
   updateAuditLog,
   deleteAuditLog,
-  closePool
+  closeDBConnections
 };

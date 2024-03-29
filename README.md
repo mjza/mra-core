@@ -1,8 +1,8 @@
-# Authorization service
+# Core API service
 
 ## Creation Steps
-1. Created a `mra-authorization` repository in GitHub
-2. Created a `mra-authorization` Heroku app and connected it to the repository.
+1. Created a `mra-core` repository in GitHub
+2. Created a `mra-core` Heroku app and connected it to the repository.
 3. Activated `Automatic deploys` in Heroku after connecting to the repository.
 4. Used `npm init -y` to initialize a new Node.js project.
 5. Installed Express, and PostgreSQL database client libraries.
@@ -30,21 +30,21 @@ For the production:
 2. You must change `YYY` must be replaced via [https://app.sendgrid.com/settings/api_keys](https://app.sendgrid.com/settings/api_keys).
 
 ```bash
-heroku config:set BASE_URL=http://authorization.myreport.app --app mra-authorization
-heroku config:set DB_USER=XXX --app mra-authorization
-heroku config:set DB_HOST=XXX --app mra-authorization
-heroku config:set DB_NAME=XXX --app mra-authorization
-heroku config:set DB_PASSWORD=XXX --app mra-authorization
-heroku config:set DB_PORT=5432 --app mra-authorization
-heroku config:set DOC_URL=/docs --app mra-authorization
-heroku config:set DOC_PASS=Zu~0WC,X,8h3Hh@s --app mra-authorization
-heroku config:set DOC_USER=modir --app mra-authorization
-heroku config:set NODE_ENV=production --app mra-authorization
-heroku config:set PORT=443 --app mra-authorization
-heroku config:set TZ=UTC --app mra-authorization
+heroku config:set BASE_URL=http://core.myreport.app --app mra-core
+heroku config:set DB_USER=XXX --app mra-core
+heroku config:set DB_HOST=XXX --app mra-core
+heroku config:set DB_NAME=XXX --app mra-core
+heroku config:set DB_PASSWORD=XXX --app mra-core
+heroku config:set DB_PORT=5432 --app mra-core
+heroku config:set DOC_URL=/docs --app mra-core
+heroku config:set DOC_PASS=Zu~0WC,X,8h3Hh@s --app mra-core
+heroku config:set DOC_USER=modir --app mra-core
+heroku config:set NODE_ENV=production --app mra-core
+heroku config:set PORT=443 --app mra-core
+heroku config:set TZ=UTC --app mra-core
 ```
 
-Then run run the above commands in the Heroku CLI or go to the `mra-authorization` application, then in the `Settings` tab press on the `Reveal Config Vars` button and edit them directly. Like the following picture:
+Then run run the above commands in the Heroku CLI or go to the `mra-core` application, then in the `Settings` tab press on the `Reveal Config Vars` button and edit them directly. Like the following picture:
 ![](./images/figure3.png)
 
 
@@ -66,9 +66,9 @@ npm run generate-docs
 ```
 
 ## GitHub configuration
-`HEROKU_API_KEY` is the api key for accessing `mra-authorization` application, and `MY_PAT` is my personal access token of GitHub for tagging releases. They have been particularly set in GitHub secrets.
+`HEROKU_API_KEY` is the api key for accessing `mra-core` application, and `MY_PAT` is my personal access token of GitHub for tagging releases. They have been particularly set in GitHub secrets.
 
-Use `heroku authorizations:create` for creating a key for setting `HEROKU_API_KEY`.
+Use `heroku cores:create` for creating a key for setting `HEROKU_API_KEY`.
 
 ![](./images/figure4.png)
 
