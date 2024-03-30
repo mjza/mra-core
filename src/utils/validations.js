@@ -1,6 +1,6 @@
 const axios = require('axios');
 const { Agent } = require('https');
-const { updateEventLog, updateEventLog } = require('./logger');
+const { createEventLog, updateEventLog } = require('./logger');
 
 /**
  * Tests if a given URL is accessible by making a HEAD request.
@@ -58,7 +58,7 @@ const isValidUrl = (inputUrl) => {
  * @param {Object} res - The response object from Express.js.
  * @param {function} next - The next middleware function in the Express.js route.
  */
-const authorizeUser = (extraData) => async (req, res, next) => {
+const authorize = (extraData) => async (req, res, next) => {
     // Get the token from the request header
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
@@ -75,7 +75,9 @@ const authorizeUser = (extraData) => async (req, res, next) => {
             attrs: extraData.attrs
         };
         
-        const response = await axios.post(process.env.AUTH_SERVICE_URL, body, {
+        const serviceUrl = process.env.AUTH_SERVER_URL + '/v1/authorize';
+
+        const response = await axios.post(serviceUrl, body, {
             headers: {
                 Authorization: authHeader
             }
@@ -104,4 +106,4 @@ const authorizeUser = (extraData) => async (req, res, next) => {
     }
 };
 
-module.exports = { testUrlAccessibility, isValidUrl, authorizeUser };
+module.exports = { testUrlAccessibility, isValidUrl, authorize };

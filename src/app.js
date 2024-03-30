@@ -92,14 +92,14 @@ async function createApp() {
     const swaggerDefinition = {
         openapi: '3.0.0',
         info: {
-            title: 'Express Authentication API',
+            title: 'Express Core API',
             version: '1.0.0',
-            description: 'A CRUD Authentication API',
+            description: 'A CRUD Core API',
         },
         servers: [
             {
                 url: (process.env.BASE_URL || localhost),
-                description: 'Authentication Microservices',
+                description: 'Core Microservice',
             }
         ],
         components: {
@@ -112,7 +112,7 @@ async function createApp() {
             },
         },
         tags: [
-            { name: '1st', description: 'Ticket' },
+            { name: '1st', description: 'User Details' },
         ],
     };
 
@@ -139,7 +139,9 @@ async function createApp() {
     app.use('/v1' + process.env.DOC_URL, basicAuth({
         users,
         challenge: true // Causes browsers to show a login dialog
-    }), swaggerUi.serve, swaggerUi.setup(v1SwaggerSpec));
+    }), swaggerUi.serve, swaggerUi.setup(v1SwaggerSpec, {
+        customSiteTitle: "Core API"
+    }));
 
     // configure Express to serve static files 
     app.use(express.static('public'));
@@ -172,7 +174,6 @@ async function createApp() {
  *                          handled by the caller to avoid unhandled promise rejections.
  */
 async function closeApp() {
-    await closeCasbinAdapter();
     await db.closeDBConnections();
 }
 

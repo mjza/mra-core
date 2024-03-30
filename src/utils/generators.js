@@ -29,4 +29,4 @@ const generateMockUserRoute = () => {
     }
 };
 
-module.exports = { generateRandomString, generateMockUserDB, generateMockUserRoute, };
+module.exports = { generateRandomString, generateMockUserRoute };
