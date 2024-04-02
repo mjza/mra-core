@@ -69,17 +69,21 @@ const closeDBConnections = async () => {
 };
 
 /**
- * Retrieves user details from the database based on the provided userId.
+ * Retrieves user details from the database based on the provided conditions.
  *
- * @param {number} userId - The user's unique identifier.
- * @returns {Object} The user details object.
+ * This function queries the database for user details matching the specified conditions
+ * and returns an array of user details objects. The conditions object can contain `where`
+ * clauses to specify the query criteria.
+ *
+ * @param {object} where - The object contain `where` clauses to specify the search criteria.
+ * @returns {Object[]} An array of user details objects. Each object contains user details 
+ *                     such as user_id, first_name, middle_name, last_name, gender_id, date_of_birth, 
+ *                     profile_picture_url, profile_picture_thumbnail_url, creator, created_at, updator, 
+ *                     and updated_at. If no users are found matching the conditions, an empty array is returned.
  */
-async function getUserDetails(userId) {
-  if (isNaN(userId))
-    return null;
-
-  const userDetails = await MraUserDetails.findOne({
-    where: { user_id: userId },
+async function getUserDetails(where) {
+  const userDetails = await MraUserDetails.findAll({
+    where,
     include: [{
       model: MraGenderTypes,
       as: "gender",
@@ -88,7 +92,7 @@ async function getUserDetails(userId) {
     attributes: ['user_id', 'first_name', 'middle_name', 'last_name', 'gender_id', 'date_of_birth', 'profile_picture_url', 'profile_picture_thumbnail_url', 'creator', 'created_at', 'updator', 'updated_at'],
   });
 
-  return userDetails && userDetails.get({ plain: true });
+  return userDetails && userDetails.map(user => user.get({ plain: true }));
 }
 
 /**
@@ -98,22 +102,11 @@ async function getUserDetails(userId) {
  * @returns {Object} The created user details object.
  */
 async function createUserDetails(userDetails) {
-  const createdUser = await MraUserDetails.create({
-    user_id: userDetails.userId,
-    first_name: userDetails.firstName,
-    middle_name: userDetails.middleName,
-    last_name: userDetails.lastName,
-    gender_id: userDetails.genderId,
-    date_of_birth: userDetails.dateOfBirth,
-    profile_picture_url: userDetails.profilePictureUrl,
-    profile_picture_thumbnail_url: userDetails.profilePictureThumbnailUrl,
-    display_name: userDetails.displayName,
-    public_profile_picture_thumbnail_url: userDetails.publicProfilePictureThumbnailUrl,
-    creator: userDetails.creator
-  });
+  const createdRow = await MraUserDetails.create(userDetails);
 
-  if (createdUser && createdUser.user_id) {
-    return await getUserDetails(userDetails.userId);
+  if (createdRow && createdRow.user_id) {
+    const userDetails = await getUserDetails({ user_id: createdRow.user_id });
+    return userDetails && userDetails[0];
   } else {
     return null;
   }
@@ -122,28 +115,19 @@ async function createUserDetails(userDetails) {
 /**
  * Updates user details in the database based on the provided userId and userDetails.
  *
- * @param {number} userId - The user's unique identifier.
+ * @param {object} where - The object contain `where` clauses to specify the search criteria.
  * @param {Object} userDetails - The new user details object.
  * @returns {Object} The updated user details object.
  */
-async function updateUserDetails(userId, userDetails) {
-  await MraUserDetails.update({
-    first_name: userDetails.firstName,
-    middle_name: userDetails.middleName,
-    last_name: userDetails.lastName,
-    gender_id: userDetails.genderId,
-    date_of_birth: userDetails.dateOfBirth,
-    profile_picture_url: userDetails.profilePictureUrl,
-    profile_picture_thumbnail_url: userDetails.profilePictureThumbnailUrl,
-    display_name: userDetails.displayName,
-    public_profile_picture_thumbnail_url: userDetails.publicProfilePictureThumbnailUrl,
-    updator: userDetails.updator
-  }, {
-    where: { user_id: userId }
-  });
+async function updateUserDetails(where, userDetails) {
+  const [affectedRowCount] = await MraUserDetails.update(userDetails, { where });
 
-  const updatedUserDetails = await getUserDetails(userId);
-  return updatedUserDetails;
+  if (affectedRowCount > 0) {
+    const userDetails =  await getUserDetails(where);
+    return userDetails;
+  } else {
+    return null;
+  }
 }
 
 /**

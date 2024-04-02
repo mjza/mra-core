@@ -1,7 +1,7 @@
 const express = require('express');
-const { body, param, validationResult } = require('express-validator');
+const { body, query, param, validationResult } = require('express-validator');
 const { authorize } = require('../../utils/validations');
-const { toLowerCamelCase, encryptObjectItems, decryptObjectItems } = require('../../utils/converters');
+const { toLowerCamelCase, toSnakeCase, encryptObjectItems, decryptObjectItems } = require('../../utils/converters');
 const db = require('../../utils/database');
 const { apiRequestLimiter } = require('../../utils/rateLimit');
 const { updateEventLog } = require('../../utils/logger');
@@ -10,71 +10,136 @@ const router = express.Router();
 
 // List of optional properties
 const optionalProperties = [
-  'firstName',
-  'middleName',
-  'lastName',
-  'genderId',
-  'dateOfBirth',
-  'profilePictureUrl',
-  'profilePictureThumbnailUrl',
-  'displayName',
-  'publicProfilePictureThumbnailUrl'
+  'first_name',
+  'middle_name',
+  'last_name',
+  'gender_id',
+  'date_of_birth',
+  'profile_picture_url',
+  'profile_picture_thumbnail_url',
+  'display_name',
+  'public_profile_picture_thumbnail_url'
 ];
 
 const secretProperties = [
-  'firstName',
-  'middleName',
-  'lastName',
-  'dateOfBirth',
-  'profilePictureUrl',
-  'profilePictureThumbnailUrl'
+  'first_name',
+  'middle_name',
+  'last_name',
+  'date_of_birth',
+  'profile_picture_url',
+  'profile_picture_thumbnail_url',
 ];
+
+/**
+ * @swagger
+ * components:
+ *   requests:
+ *     UserDetailsBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *               middleName:
+ *                 type: string
+ *               lastName:
+ *                 type: string
+ *               genderId:
+ *                 type: integer
+ *               dateOfBirth:
+ *                 type: string
+ *                 format: date
+ *               profilePictureUrl:
+ *                 type: string
+ *               profilePictureThumbnailUrl:
+ *                 type: string
+ *               displayName:
+ *                 type: string
+ *               publicProfilePictureThumbnailUrl:
+ *                 type: string
+ *   responses:
+ *     UserDetailsObject:
+ *       type: object
+ *       properties:  
+ *         userId:
+ *           type: integer               
+ *         firstName:
+ *           type: string
+ *         middleName:
+ *           type: string
+ *         lastName:
+ *           type: string
+ *         genderId:
+ *           type: integer
+ *         dateOfBirth:
+ *           type: string
+ *           format: date
+ *         profilePictureUrl:
+ *           type: string
+ *           example: "https://abc.com/pic1.jpg"
+ *         profilePictureThumbnailUrl:
+ *           type: string
+ *           example: "https://abc.com/pic2.jpg"
+ *         displayName:
+ *           type: string
+ *         publicProfilePictureThumbnailUrl:
+ *           type: string
+ *           example: "https://abc.com/pic3.jpg"
+ *         creator:
+ *           type: integer
+ *           example: 2
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *           example: "2024-04-02T05:44:24.563Z"
+ *         updator:
+ *           type: integer
+ *           nullable: true
+ *           example: null
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *           example: null
+ *         gender:
+ *           type: object
+ *           properties:
+ *             genderId:
+ *               type: integer
+ *               example: 1
+ *             genderName:
+ *               type: string
+ *               example: "Female"
+ */
 
 /**
  * @swagger
  * /v1/user_details:
  *   get:
  *     summary: Retrieve user details
- *     description: Get the details of the user whose ID matches the one in the JWT.
+ *     description: Get the details of multiple users based on the provided conditions. Returns details of the user whose ID matches the one in the JWT if no specific userId is provided.
  *     tags: [1st]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: userId
+ *         required: false
+ *         schema:
+ *           type: integer
+ *         description: Optional user ID to retrieve details for a specific user.
  *     responses:
  *       200:
  *         description: User details retrieved successfully.
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:  
- *                 userId:
- *                   type: integer               
- *                 firstName:
- *                   type: string
- *                 middleName:
- *                   type: string
- *                 lastName:
- *                   type: string
- *                 genderId:
- *                   type: integer
- *                 dateOfBirth:
- *                   type: string
- *                   format: date
- *                 profilePictureUrl:
- *                   type: string
- *                 profilePictureThumbnailUrl:
- *                   type: string
- *                 displayName:
- *                   type: string
- *                 publicProfilePictureThumbnailUrl:
- *                   type: string
- *                 gender:
- *                   type: object
- *                   properties:
- *                     genderId:
- *                       type: integer
- *                     genderName:
- *                       type: string
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/responses/UserDetailsObject'
  *       401:
  *         $ref: '#/components/responses/UnauthorizedAccessInvalidTokenProvided'
  *       404:
@@ -93,17 +158,35 @@ const secretProperties = [
  *         $ref: '#/components/responses/ServerInternalError'
  */
 router.get('/user_details', apiRequestLimiter,
-  [authorize({ dom: '0', obj: 'mra_user_details', act: 'R', attrs: {userId: 'self'}})], 
+  [
+    query('userId')
+      .optional({ checkFalsy: true })
+      .isNumeric().withMessage('UserId must be a number.'),
+  ],
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    next();
+  },
+  (req, res, next) => {
+    const userId = req.query && req.query.userId;
+    const middleware = authorize({ dom: '0', obj: 'mra_user_details', act: 'R', attrs: { where: { user_id: userId && parseInt(userId, 10) } } });
+    middleware(req, res, next);
+  },
   async (req, res) => {
     try {
-      const userId = req.user.userId; // Adjust depending on how the user ID is stored in the JWT
-      const userDetails = await db.getUserDetails(userId);
+      const userDetailsArray = await db.getUserDetails(req.conditions.where);
 
-      if (!userDetails) {
+      if (!userDetailsArray || userDetailsArray.length === 0) {
         return res.status(404).json({ message: 'User details not found' });
       }
-      const decrpytedData = decryptObjectItems(toLowerCamelCase(userDetails), secretProperties);
-      return res.json(decrpytedData);
+
+      const decryptedDataArray = userDetailsArray.map(userDetails =>
+        toLowerCamelCase(decryptObjectItems(userDetails, secretProperties))
+      );
+      return res.json(decryptedDataArray);
     } catch (err) {
       updateEventLog(req, err);
       return res.status(500).json({ message: err.message });
@@ -128,61 +211,40 @@ router.get('/user_details', apiRequestLimiter,
  *             properties:
  *               userId:
  *                 type: integer
+ *                 required: true
  *               firstName:
  *                 type: string
+ *                 example: "John"
  *               middleName:
  *                 type: string
  *               lastName:
  *                 type: string
+ *                 example: "Doh"
  *               genderId:
  *                 type: integer
+ *                 example: 1 
  *               dateOfBirth:
  *                 type: string
  *                 format: date
  *               profilePictureUrl:
  *                 type: string
+ *                 example: "https://abc.com/pic1.jpg"
  *               profilePictureThumbnailUrl:
  *                 type: string
+ *                 example: "https://abc.com/pic2.jpg"
  *               displayName:
  *                 type: string
+ *                 example: "Docky"
  *               publicProfilePictureThumbnailUrl:
  *                 type: string
+ *                 example: "https://abc.com/pic3.jpg"
  *     responses:
  *       201:
  *         description: User details created successfully.
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 userId:
- *                   type: integer
- *                 firstName:
- *                   type: string
- *                 middleName:
- *                   type: string
- *                 lastName:
- *                   type: string
- *                 genderId:
- *                   type: integer
- *                 dateOfBirth:
- *                   type: string
- *                   format: date
- *                 profilePictureUrl:
- *                   type: string
- *                 profilePictureThumbnailUrl:
- *                   type: string
- *                 displayName:
- *                   type: string
- *                 publicProfilePictureThumbnailUrl:
- *                   type: string
- *                 gender:
- *                   type: object
- *                   properties:
- *                     genderId:
- *                       type: integer
- *                     genderName:
- *                       type: string
+ *               $ref: '#/components/responses/UserDetailsObject'
  *       400:
  *         description: Invalid request parameters.
  *         content:
@@ -239,8 +301,6 @@ router.get('/user_details', apiRequestLimiter,
  */
 router.post('/user_details', apiRequestLimiter,
   [
-    authorize({ dom: '0', obj: 'mra_user_details', act: 'C', attrs: {userId: 'self'}}),
-
     body('userId')
       .notEmpty()
       .withMessage('User ID is required.')
@@ -316,30 +376,31 @@ router.post('/user_details', apiRequestLimiter,
       .isLength({ max: 255 })
       .withMessage('Public profile picture thumbnail URL must not exceed 255 characters.')
 
-  ], async (req, res) => {
-
+  ],
+  (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
-
-    const userIdFromToken = req.user.userId;
-    const userDetails = req.body;
-
-    if (userIdFromToken !== userDetails.userId) {
-      return res.status(403).json({ message: 'Unauthorized to create details for other users.' });
-    }
-
-    // Set missing properties to null
-    optionalProperties.forEach(prop => {
-      if (userDetails[prop] === undefined) {
-        userDetails[prop] = null;
-      }
-    });
-
+    next();
+  },
+  (req, res, next) => {
+    const processedBody = toSnakeCase(req.body);
+    const middleware = authorize({ dom: '0', obj: 'mra_user_details', act: 'C', attrs: { set: processedBody } });
+    middleware(req, res, next);
+  },
+  async (req, res) => {
     try {
+      const userDetails = req.conditions.set;
+
+      // Set missing properties to null
+      optionalProperties.forEach(prop => {
+        if (userDetails[prop] === undefined) {
+          userDetails[prop] = null;
+        }
+      });
       const createdUserDetails = await db.createUserDetails(encryptObjectItems(userDetails, secretProperties));
-      return res.status(201).json(decryptObjectItems(toLowerCamelCase(createdUserDetails), secretProperties));
+      return res.status(201).json(toLowerCamelCase(decryptObjectItems(createdUserDetails, secretProperties)));
     } catch (err) {
       updateEventLog(req, err);
 
@@ -390,61 +451,37 @@ router.post('/user_details', apiRequestLimiter,
  *             properties:
  *               firstName:
  *                 type: string
+ *                 example: "John"
  *               middleName:
  *                 type: string
  *               lastName:
  *                 type: string
+ *                 example: "Doh"
  *               genderId:
  *                 type: integer
+ *                 example: 2 
  *               dateOfBirth:
  *                 type: string
  *                 format: date
  *               profilePictureUrl:
  *                 type: string
+ *                 example: "https://abc.com/pic1.jpg"
  *               profilePictureThumbnailUrl:
  *                 type: string
+ *                 example: "https://abc.com/pic2.jpg"
  *               displayName:
  *                 type: string
+ *                 example: "Mocky"
  *               publicProfilePictureThumbnailUrl:
  *                 type: string
+ *                 example: "https://abc.com/pic3.jpg"
  *     responses:
  *       200:
  *         description: User details updated successfully.
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 userId:
- *                   type: integer
- *                 firstName:
- *                   type: string
- *                 middleName:
- *                   type: string
- *                 lastName:
- *                   type: string
- *                 genderId:
- *                   type: integer
- *                 genderName:
- *                   type: string
- *                 dateOfBirth:
- *                   type: string
- *                   format: date
- *                 profilePictureUrl:
- *                   type: string
- *                 profilePictureThumbnailUrl:
- *                   type: string
- *                 displayName:
- *                   type: string
- *                 publicProfilePictureThumbnailUrl:
- *                   type: string
- *                 gender:
- *                   type: object
- *                   properties:
- *                     genderId:
- *                       type: integer
- *                     genderName:
- *                       type: string
+ *               $ref: '#/components/responses/UserDetailsObject'
  *       400:
  *         description: UserId is required.
  *         content:
@@ -497,9 +534,6 @@ router.post('/user_details', apiRequestLimiter,
  */
 router.put('/user_details/:userId', apiRequestLimiter,
   [
-    authorize({ dom: '0', obj: 'mra_user_details', act: 'U', attrs: {userId: 'self'}}),
-
-    // Validate userId
     param('userId')
       .exists()
       .withMessage('UserId is required.')
@@ -575,36 +609,37 @@ router.put('/user_details/:userId', apiRequestLimiter,
       .isLength({ max: 255 })
       .withMessage('Public profile picture thumbnail URL must not exceed 255 characters.')
 
-  ], async (req, res) => {
-
+  ],
+  (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
-
-    const userIdFromToken = req.user.userId; // Adjust based on JWT structure
-    const { userId } = req.params;
-    const userDetails = req.body;
-
-    if (parseInt(userIdFromToken) !== parseInt(userId)) {
-      return res.status(403).json({ message: 'Unauthorized to update details for other users.' });
-    }
-
-    // Set missing properties to null
-    optionalProperties.forEach(prop => {
-      if (userDetails[prop] === undefined) {
-        userDetails[prop] = null;
-      }
-    });
-
+    next();
+  },
+  (req, res, next) => {
+    const processedBody = toSnakeCase(req.body);
+    const middleware = authorize({ dom: '0', obj: 'mra_user_details', act: 'U', attrs: { where: { user_id: parseInt(req.params.userId, 10) }, set: processedBody } });
+    middleware(req, res, next);
+  },
+  async (req, res) => {
     try {
-      const updatedUserDetails = await db.updateUserDetails(userId, encryptObjectItems(userDetails, secretProperties));
+      const userDetails = req.conditions.set;
+
+      // Set missing properties to null
+      optionalProperties.forEach(prop => {
+        if (userDetails[prop] === undefined) {
+          userDetails[prop] = null;
+        }
+      });
+
+      const updatedUserDetails = await db.updateUserDetails(req.conditions.where, encryptObjectItems(userDetails, secretProperties));
 
       if (!updatedUserDetails) {
         return res.status(404).json({ message: 'There is no record for this user in the user details table.' });
       }
 
-      return res.status(200).json(decryptObjectItems(toLowerCamelCase(updatedUserDetails), secretProperties));
+      return res.status(200).json(toLowerCamelCase(decryptObjectItems(updatedUserDetails, secretProperties)));
     } catch (err) {
       updateEventLog(req, err);
 

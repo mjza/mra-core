@@ -59,14 +59,6 @@ const isValidUrl = (inputUrl) => {
  * @param {function} next - The next middleware function in the Express.js route.
  */
 const authorize = (extraData) => async (req, res, next) => {
-    // Get the token from the request header
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
-
-    if (token == null) {// If no token is provided
-        return res.status(401).json({ message: 'You must provide a valid JWT token.' });
-    }
-
     try {
         const body = {
             dom: extraData.dom,
@@ -77,21 +69,25 @@ const authorize = (extraData) => async (req, res, next) => {
         
         const serviceUrl = process.env.AUTH_SERVER_URL + '/v1/authorize';
 
+        const authHeader = req.headers['authorization'];
+
         const response = await axios.post(serviceUrl, body, {
             headers: {
                 Authorization: authHeader
             }
         });
 
-        const { user, roles } = response.data;
+        const { user, roles, conditions } = response.data;
         if(!req.logId) {
             const logId = await createEventLog(req, user.userId);
             req.logId = logId;
             req.user = user;
             req.roles = roles;
+            req.conditions = conditions;
         } else {
             req.user = user;
             req.roles = roles;
+            req.conditions = conditions;
             await updateEventLog(req, { success: 'User has been authorized.', details: response.data});
         }
         next();

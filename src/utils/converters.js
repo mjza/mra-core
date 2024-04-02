@@ -157,6 +157,47 @@ const toLowerCamelCase = (obj) => {
 };
 
 /**
+ * Converts the keys of an object from lowerCamelCase to snake_case.
+ *
+ * This function recursively converts all object keys to snake_case, where
+ * each word is separated by an underscore and all letters are in lowercase.
+ * It handles nested objects and arrays, ensuring that keys at every level
+ * are converted. Non-object values, including arrays, are left unchanged
+ * except for the recursive conversion of array items or object properties.
+ *
+ * @param {Object} obj - The object whose keys need to be converted to snake_case.
+ * @returns {Object} A new object with all keys in snake_case.
+ */
+const toSnakeCase = (obj) => {
+    const convertKey = (key) => key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+
+    const processValue = (value) => {
+        // Check if the value is a date object
+        if (value instanceof Date) {
+            return value;
+        }
+
+        // Check if the value is an array and process each item
+        if (Array.isArray(value)) {
+            return value.map(item => processValue(item));
+        }
+
+        // If the value is an object, convert its keys to snake_case
+        if (typeof value === 'object' && value !== null) {
+            return toSnakeCase(value);
+        }
+
+        // For all other values, return them directly
+        return value;
+    };
+
+    return Object.entries(obj).reduce((acc, [key, value]) => {
+        acc[convertKey(key)] = processValue(value);
+        return acc;
+    }, {});
+};
+
+/**
  * Extracts key information from the Express request object and returns it as a JSON string.
  * Handles circular references in the object structure to ensure proper JSON serialization.
  * 
@@ -248,4 +289,4 @@ function hideSensitiveData(obj, forbiddenProperties) {
 }
 
 
-module.exports = { toLowerCamelCase, encrypt, decrypt, encryptObjectItems, decryptObjectItems, convertRequestData };
+module.exports = { toLowerCamelCase, toSnakeCase, encrypt, decrypt, encryptObjectItems, decryptObjectItems, convertRequestData };
