@@ -34,9 +34,7 @@ describe('/user_details endpoints', () => {
             genderId: 1,
             dateOfBirth: '2023-12-07',
             profilePictureUrl: 'http://example.com/123',
-            profilePictureThumbnailUrl: 'http://example.com/124',
-            creator: testUser.user_id,
-            updator: testUser.user_id
+            profilePictureThumbnailUrl: 'http://example.com/124'
         };
     });
 
@@ -74,7 +72,7 @@ describe('/user_details endpoints', () => {
             .set('Authorization', `Bearer ${authData.token}`);
 
             expect(res.statusCode).toEqual(403);
-            expect(res.body.message).toEqual('Unauthorized to create details for other users.');
+            expect(res.body.message).toEqual('User is not authorized.');
         });
 
         it('should create user details', async () => {
@@ -93,29 +91,29 @@ describe('/user_details endpoints', () => {
             expect(res.body.dateOfBirth).toBe(userDetails.dateOfBirth);
             expect(res.body.profilePictureUrl).toBe(userDetails.profilePictureUrl);
             expect(res.body.profilePictureThumbnailUrl).toBe(userDetails.profilePictureThumbnailUrl);
-            expect(res.body.creator).toBe(userDetails.creator);
+            expect(res.body.creator).toBe(userDetails.userId);
             expect(res.body.createdAt).toBeDefined();
             expect(res.body.updator).toBeNull();
             expect(res.body.updatedAt).toBeNull();
         });
 
-        it('should return 401 as token is missing', async () => {
+        it('should return 403 as token is missing', async () => {
             const res = await request(app)
             .post('/v1/user_details')
             .send(userDetails);
 
-            expect(res.statusCode).toEqual(401);
-            expect(res.body.message).toEqual('You must provide a valid JWT token.');
+            expect(res.statusCode).toEqual(403);
+            expect(res.body.message).toEqual('User is not authorized.');
         });
 
-        it('should return 401 as token is invalid', async () => {
+        it('should return 403 as token is invalid', async () => {
             const res = await request(app)
             .post('/v1/user_details')
             .send(userDetails)
             .set('Authorization', `Bearer ${authData.token}` + 'x');
 
-            expect(res.statusCode).toEqual(401);
-            expect(res.body.message).toEqual('Provided JWT token is invalid.');
+            expect(res.statusCode).toEqual(403);
+            expect(res.body.message).toEqual('User is not authorized.');
         });
 
         it('should not create user details for other user', async () => {
@@ -127,7 +125,7 @@ describe('/user_details endpoints', () => {
             .set('Authorization', `Bearer ${authData.token}`);
 
             expect(res.statusCode).toEqual(403);
-            expect(res.body.message).toEqual('Unauthorized to create details for other users.');
+            expect(res.body.message).toEqual('User is not authorized.');
         });
 
         it('should returns 422 as the entity exists', async () => {
@@ -145,30 +143,33 @@ describe('/user_details endpoints', () => {
             const res = await request(app).get('/v1/user_details').set('Authorization', `Bearer ${authData.token}`);
             expect(res.statusCode).toEqual(200);
             expect(res.body).not.toBeNull();
-            expect(res.body.firstName).toBe(userDetails.firstName);
-            expect(res.body.middleName).toBe(userDetails.middleName);
-            expect(res.body.lastName).toBe(userDetails.lastName);
-            expect(res.body.genderId).toBe(userDetails.genderId);
-            expect(res.body.gender.genderName).toBe('Female');
-            expect(res.body.dateOfBirth).toBe(userDetails.dateOfBirth);
-            expect(res.body.profilePictureUrl).toBe(userDetails.profilePictureUrl);
-            expect(res.body.profilePictureThumbnailUrl).toBe(userDetails.profilePictureThumbnailUrl);
-            expect(res.body.creator).toBe(userDetails.creator);
-            expect(res.body.createdAt).toBeDefined();
-            expect(res.body.updator).toBeNull();
-            expect(res.body.updatedAt).toBeNull();
+            expect(Array.isArray(res.body)).toBeTruthy();
+            expect(res.body.length).toBe(1);
+            const item = res.body[0];
+            expect(item.firstName).toBe(userDetails.firstName);
+            expect(item.middleName).toBe(userDetails.middleName);
+            expect(item.lastName).toBe(userDetails.lastName);
+            expect(item.genderId).toBe(userDetails.genderId);
+            expect(item.gender.genderName).toBe('Female');
+            expect(item.dateOfBirth).toBe(userDetails.dateOfBirth);
+            expect(item.profilePictureUrl).toBe(userDetails.profilePictureUrl);
+            expect(item.profilePictureThumbnailUrl).toBe(userDetails.profilePictureThumbnailUrl);
+            expect(item.creator).toBe(userDetails.userId);
+            expect(item.createdAt).toBeDefined();
+            expect(item.updator).toBeNull();
+            expect(item.updatedAt).toBeNull();
         });
 
-        it('should return 401 as token is missing', async () => {
+        it('should return 403 as token is missing', async () => {
             const res = await request(app).get('/v1/user_details')
-            expect(res.statusCode).toEqual(401);
-            expect(res.body.message).toEqual('You must provide a valid JWT token.');
+            expect(res.statusCode).toEqual(403);
+            expect(res.body.message).toEqual('User is not authorized.');
         });
 
-        it('should return 401 as token is invalid', async () => {
+        it('should return 403 as token is invalid', async () => {
             const res = await request(app).get('/v1/user_details').set('Authorization', `Bearer ${authData.token}` + 'x');
-            expect(res.statusCode).toEqual(401);
-            expect(res.body.message).toEqual('Provided JWT token is invalid.');
+            expect(res.statusCode).toEqual(403);
+            expect(res.body.message).toEqual('User is not authorized.');
         });
     });
 
@@ -194,31 +195,31 @@ describe('/user_details endpoints', () => {
             expect(res.body.dateOfBirth).toBe(userDetails.dateOfBirth);
             expect(res.body.profilePictureUrl).toBe(userDetails.profilePictureUrl);
             expect(res.body.profilePictureThumbnailUrl).toBe(userDetails.profilePictureThumbnailUrl);
-            expect(res.body.creator).toBe(userDetails.creator);
+            expect(res.body.creator).toBe(userDetails.userId);
             expect(res.body.createdAt).toBeDefined();
-            expect(res.body.updator).toBe(userDetails.updator);
+            expect(res.body.updator).toBe(userDetails.userId);
             expect(res.body.updatedAt).toBeDefined();
         });
 
-        it('should return 401 as token is missing', async () => {
+        it('should return 403 as token is missing', async () => {
             const res = await request(app).put(`/v1/user_details/${userDetails.userId}`).send(userDetails);
 
-            expect(res.statusCode).toEqual(401);
-            expect(res.body.message).toEqual('You must provide a valid JWT token.');
+            expect(res.statusCode).toEqual(403);
+            expect(res.body.message).toEqual('User is not authorized.');
         });
 
-        it('should return 401 as token is invalid', async () => {
+        it('should return 403 as token is invalid', async () => {
             const res = await request(app).put(`/v1/user_details/${userDetails.userId}`).send(userDetails).set('Authorization', `Bearer ${authData.token}` + 'x');
 
-            expect(res.statusCode).toEqual(401);
-            expect(res.body.message).toEqual('Provided JWT token is invalid.');
+            expect(res.statusCode).toEqual(403);
+            expect(res.body.message).toEqual('User is not authorized.');
         });
 
         it('should not update user details for other user', async () => {
             const res = await request(app).put(`/v1/user_details/${userDetails.userId + 1}`).send(userDetails).set('Authorization', `Bearer ${authData.token}`);
 
             expect(res.statusCode).toEqual(403);
-            expect(res.body.message).toEqual('Unauthorized to update details for other users.');
+            expect(res.body.message).toEqual('User is not authorized.');
         });
 
         it('should returns 400 as the gender id is wrong', async () => {

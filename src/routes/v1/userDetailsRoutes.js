@@ -277,7 +277,7 @@ router.get('/user_details', apiRequestLimiter,
  *               properties:
  *                 message:
  *                   type: string
- *                   example: Unauthorized to create details for other users.
+ *                   example: User is not authorized.
  *       422:
  *         description: |
  *           Unprocessable Content. This can occur in different scenarios:
@@ -392,7 +392,6 @@ router.post('/user_details', apiRequestLimiter,
   async (req, res) => {
     try {
       const userDetails = req.conditions.set;
-
       // Set missing properties to null
       optionalProperties.forEach(prop => {
         if (userDetails[prop] === undefined) {

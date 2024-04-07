@@ -124,7 +124,7 @@ async function updateUserDetails(where, userDetails) {
 
   if (affectedRowCount > 0) {
     const userDetails =  await getUserDetails(where);
-    return userDetails;
+    return userDetails && userDetails[0];
   } else {
     return null;
   }
