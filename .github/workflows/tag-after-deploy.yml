@@ -61,7 +61,7 @@ jobs:
       with:
         github-token: ${{ secrets.MY_PAT }}
         script: |
-          const baseTagName = `v${{ env.HEROKU_VERSION }}`;
+          const baseTagName = `${{ env.HEROKU_VERSION }}`;
           let tagName = baseTagName;
           try {
             // Attempt to fetch the tag to see if it already exists
