@@ -58,7 +58,7 @@ const isValidUrl = (inputUrl) => {
  * @param {Object} res - The response object from Express.js.
  * @param {function} next - The next middleware function in the Express.js route.
  */
-const authorize = (extraData) => async (req, res, next) => {
+const authorizeUser = (extraData) => async (req, res, next) => {
     try {
         const body = {
             dom: extraData.dom,
@@ -102,4 +102,4 @@ const authorize = (extraData) => async (req, res, next) => {
     }
 };
 
-module.exports = { testUrlAccessibility, isValidUrl, authorize };
+module.exports = { testUrlAccessibility, isValidUrl, authorizeUser };

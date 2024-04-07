@@ -1,6 +1,6 @@
 const express = require('express');
 const { body, query, param, validationResult } = require('express-validator');
-const { authorize } = require('../../utils/validations');
+const { authorizeUser } = require('../../utils/validations');
 const { toLowerCamelCase, toSnakeCase, encryptObjectItems, decryptObjectItems } = require('../../utils/converters');
 const db = require('../../utils/database');
 const { apiRequestLimiter } = require('../../utils/rateLimit');
@@ -172,7 +172,7 @@ router.get('/user_details', apiRequestLimiter,
   },
   (req, res, next) => {
     const userId = req.query && req.query.userId;
-    const middleware = authorize({ dom: '0', obj: 'mra_user_details', act: 'R', attrs: { where: { user_id: userId && parseInt(userId, 10) } } });
+    const middleware = authorizeUser({ dom: '0', obj: 'mra_user_details', act: 'R', attrs: { where: { user_id: userId && parseInt(userId, 10) } } });
     middleware(req, res, next);
   },
   async (req, res) => {
@@ -386,7 +386,7 @@ router.post('/user_details', apiRequestLimiter,
   },
   (req, res, next) => {
     const processedBody = toSnakeCase(req.body);
-    const middleware = authorize({ dom: '0', obj: 'mra_user_details', act: 'C', attrs: { set: processedBody } });
+    const middleware = authorizeUser({ dom: '0', obj: 'mra_user_details', act: 'C', attrs: { set: processedBody } });
     middleware(req, res, next);
   },
   async (req, res) => {
@@ -619,7 +619,7 @@ router.put('/user_details/:userId', apiRequestLimiter,
   },
   (req, res, next) => {
     const processedBody = toSnakeCase(req.body);
-    const middleware = authorize({ dom: '0', obj: 'mra_user_details', act: 'U', attrs: { where: { user_id: parseInt(req.params.userId, 10) }, set: processedBody } });
+    const middleware = authorizeUser({ dom: '0', obj: 'mra_user_details', act: 'U', attrs: { where: { user_id: parseInt(req.params.userId, 10) }, set: processedBody } });
     middleware(req, res, next);
   },
   async (req, res) => {
