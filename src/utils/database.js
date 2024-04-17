@@ -123,7 +123,7 @@ async function updateUserDetails(where, userDetails) {
   const [affectedRowCount] = await MraUserDetails.update(userDetails, { where });
 
   if (affectedRowCount > 0) {
-    const userDetails =  await getUserDetails(where);
+    const userDetails = await getUserDetails(where);
     return userDetails && userDetails[0];
   } else {
     return null;
@@ -163,7 +163,9 @@ const getUserByUsername = async (username) => {
   }
   try {
     const user = await MraUsers.findOne({
-      where: { username: username.trim() }
+      where: {
+        username: username.trim().toLowerCase()
+      }
     });
 
     return user && user.get({ plain: true });
@@ -182,14 +184,18 @@ const deleteUserByUsername = async (username) => {
   if (!username || !username.trim())
     return null;
 
-  const user = await MraUsers.findOne({ where: { username: username.trim() } });
+  const user = await MraUsers.findOne({
+    where: {
+      username: username.trim().toLowerCase()
+    }
+  });
   if (!user) {
     return null;
   }
 
   await MraUsers.destroy({
     where: {
-      username: username.trim(),
+      username: username.trim().toLowerCase(),
     },
   });
 
@@ -212,7 +218,7 @@ const activateUser = async (user) => {
     { activation_code: null }, // Set activation_code to NULL
     {
       where: {
-        username: username.trim(),
+        username: username.trim().toLowerCase(),
         activation_code: activationCode.trim(),
         created_at: {
           [Sequelize.Op.gte]: Sequelize.literal("(now() AT TIME ZONE 'UTC') - INTERVAL '5 days'"), // created_at >= 5 days ago
