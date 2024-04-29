@@ -1,4 +1,11 @@
-const { MraUsers, MraAuditLogsCore, closeSequelize, Sequelize, MraGenderTypes, MraUserDetails } = require('../models');
+const { Sequelize, closeSequelize, MraUsers, MraAuditLogsCore, MraGenderTypes, MraUserDetails, MraTickets, MraCustomers } = require('../models');
+
+/**
+ * Closes the database connection pool.
+ */
+const closeDBConnections = async () => {
+  await closeSequelize();
+};
 
 /**
  * Inserts a new audit log into the database.
@@ -59,13 +66,6 @@ const deleteAuditLog = async (logId) => {
     }
   });
   return { success: deleteCount > 0 };
-};
-
-/**
- * Closes the database connection pool.
- */
-const closeDBConnections = async () => {
-  await closeSequelize();
 };
 
 /**
@@ -233,16 +233,98 @@ const activateUser = async (user) => {
   return updateCount > 0; // Returns true if at least one row was updated  
 };
 
+/**
+ * Retrieves ticket from the database based on the provided conditions.
+ *
+ * @param {object} where - The object containing `where` clauses to specify the search criteria.
+ * @returns {Object[]} An array of ticket objects.
+ */
+async function getTickets(where) {
+  const tickets = await MraTickets.findAll({
+      where,
+      include: [{
+          model: MraCustomers,
+          as: 'customer',
+          attributes: ['customer_id', 'customer_name'],
+      }, {
+          model: MraTicketCategories,
+          as: 'category',
+          attributes: ['ticket_category_id', 'category_name'],
+      }, {
+          model: MraUsers,
+          as: 'publisherDetails',
+          attributes: ['user_id', 'username'],
+      }],
+      attributes: [
+          'ticket_id', 'title', 'body', 'customer_id', 'ticket_category_id', 'is_confidential',
+          'media_urls', 'publisher', 'published_at', 'closed_at', 'close_reason',
+          'geo_latitude', 'geo_longitude', 'geo_location', 'creator', 'created_at', 'updator', 'updated_at'
+      ],
+  });
+
+  return tickets.map(ticket => ticket.get({ plain: true }));
+}
+
+/**
+* Creates a new ticket in the database.
+*
+* @param {Object} ticket - The ticket object.
+* @returns {Object} The created ticket object.
+*/
+async function createTicket(ticket) {
+  const createdTicket = await MraTickets.create(ticket);
+
+  if (createdTicket && createdTicket.ticket_id) {
+      const tickets = await getTickets({ ticket_id: createdTicket.ticket_id });
+      return tickets[0];
+  } else {
+      return null;
+  }
+}
+
+/**
+* Updates ticket in the database based on the provided ticketId and ticket.
+*
+* @param {object} where - The object containing `where` clauses to specify the search criteria.
+* @param {Object} ticket - The new ticket object.
+* @returns {Object} The updated ticket object.
+*/
+async function updateTicket(where, ticket) {
+  const [affectedRowCount] = await MraTickets.update(ticket, { where });
+
+  if (affectedRowCount > 0) {
+      const updatedTickets = await getTickets(where);
+      return updatedTickets[0];
+  } else {
+      return null;
+  }
+}
+
+/**
+* Deletes ticket from the database based on the provided ticketId.
+*
+* @param {object} where - The object containing `where` clauses to specify the search criteria.
+* @returns {boolean} True if the ticket was successfully deleted, otherwise false.
+*/
+async function deleteTicket(where) {
+  const deletedRowCount = await MraTickets.destroy({ where });
+  return deletedRowCount > 0;
+}
+
 module.exports = {
+  closeDBConnections,
   insertAuditLog,
   updateAuditLog,
-  deleteAuditLog,
-  closeDBConnections,
+  deleteAuditLog,  
   getUserByUserId,
   getUserByUsername,
   deleteUserByUsername,
   activateUser,
   getUserDetails,
   createUserDetails,
-  updateUserDetails
+  updateUserDetails,
+  getTickets,
+  createTicket,
+  updateTicket,
+  deleteTicket
 };

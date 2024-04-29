@@ -38,7 +38,6 @@ var _MraTicketHistory = require("./MraTicketHistory");
 var _MraTicketReactionTypes = require("./MraTicketReactionTypes");
 var _MraTicketReactions = require("./MraTicketReactions");
 var _MraTickets = require("./MraTickets");
-var _MraTokenBlacklist = require("./MraTokenBlacklist");
 var _MraTransitionConditions = require("./MraTransitionConditions");
 var _MraUserCities = require("./MraUserCities");
 var _MraUserCustomers = require("./MraUserCustomers");
@@ -94,7 +93,6 @@ function initModels(sequelize) {
 		var MraTicketReactionTypes = _MraTicketReactionTypes(sequelize, DataTypes);
 		var MraTicketReactions = _MraTicketReactions(sequelize, DataTypes);
 		var MraTickets = _MraTickets(sequelize, DataTypes);
-		var MraTokenBlacklist = _MraTokenBlacklist(sequelize, DataTypes);
 		var MraTransitionConditions = _MraTransitionConditions(sequelize, DataTypes);
 		var MraUserCities = _MraUserCities(sequelize, DataTypes);
 		var MraUserCustomers = _MraUserCustomers(sequelize, DataTypes);
@@ -152,6 +150,8 @@ function initModels(sequelize) {
 		MraCustomers.hasMany(MraSubscriptionCodeOfCustomers, { as: "mra_subscription_code_of_customers", foreignKey: "customer_id"});
 		MraSubscriptions.belongsTo(MraCustomers, { as: "customer", foreignKey: "customer_id"});
 		MraCustomers.hasMany(MraSubscriptions, { as: "mra_subscriptions", foreignKey: "customer_id"});
+		MraTicketAssignments.belongsTo(MraCustomers, { as: "customer", foreignKey: "customer_id"});
+		MraCustomers.hasMany(MraTicketAssignments, { as: "mra_ticket_assignments", foreignKey: "customer_id"});
 		MraTicketCategories.belongsTo(MraCustomers, { as: "customer", foreignKey: "customer_id"});
 		MraCustomers.hasMany(MraTicketCategories, { as: "mra_ticket_categories", foreignKey: "customer_id"});
 		MraTickets.belongsTo(MraCustomers, { as: "customer", foreignKey: "customer_id"});
@@ -222,8 +222,12 @@ function initModels(sequelize) {
 		MraUsers.hasMany(MraConditionFields, { as: "mra_condition_fields", foreignKey: "creator"});
 		MraConditionFields.belongsTo(MraUsers, { as: "updator_mra_user", foreignKey: "updator"});
 		MraUsers.hasMany(MraConditionFields, { as: "updator_mra_condition_fields", foreignKey: "updator"});
+		MraContactInformation.belongsTo(MraUsers, { as: "creator_mra_user", foreignKey: "creator"});
+		MraUsers.hasMany(MraContactInformation, { as: "mra_contact_informations", foreignKey: "creator"});
+		MraContactInformation.belongsTo(MraUsers, { as: "updator_mra_user", foreignKey: "updator"});
+		MraUsers.hasMany(MraContactInformation, { as: "updator_mra_contact_informations", foreignKey: "updator"});
 		MraContactInformation.belongsTo(MraUsers, { as: "user", foreignKey: "user_id"});
-		MraUsers.hasMany(MraContactInformation, { as: "mra_contact_informations", foreignKey: "user_id"});
+		MraUsers.hasMany(MraContactInformation, { as: "user_mra_contact_informations", foreignKey: "user_id"});
 		MraCustomers.belongsTo(MraUsers, { as: "creator_mra_user", foreignKey: "creator"});
 		MraUsers.hasMany(MraCustomers, { as: "mra_customers", foreignKey: "creator"});
 		MraCustomers.belongsTo(MraUsers, { as: "updator_mra_user", foreignKey: "updator"});
@@ -274,16 +278,18 @@ function initModels(sequelize) {
 		MraUsers.hasMany(MraTermsAndConditions, { as: "updator_mra_terms_and_conditions", foreignKey: "updator"});
 		MraTicketAssignments.belongsTo(MraUsers, { as: "agent", foreignKey: "agent_id"});
 		MraUsers.hasMany(MraTicketAssignments, { as: "mra_ticket_assignments", foreignKey: "agent_id"});
-		MraTicketAssignments.belongsTo(MraUsers, { as: "assigner_mra_user", foreignKey: "assigner"});
-		MraUsers.hasMany(MraTicketAssignments, { as: "assigner_mra_ticket_assignments", foreignKey: "assigner"});
-		MraTicketAssignments.belongsTo(MraUsers, { as: "discharger_mra_user", foreignKey: "discharger"});
-		MraUsers.hasMany(MraTicketAssignments, { as: "discharger_mra_ticket_assignments", foreignKey: "discharger"});
+		MraTicketAssignments.belongsTo(MraUsers, { as: "creator_mra_user", foreignKey: "creator"});
+		MraUsers.hasMany(MraTicketAssignments, { as: "creator_mra_ticket_assignments", foreignKey: "creator"});
+		MraTicketAssignments.belongsTo(MraUsers, { as: "updator_mra_user", foreignKey: "updator"});
+		MraUsers.hasMany(MraTicketAssignments, { as: "updator_mra_ticket_assignments", foreignKey: "updator"});
 		MraTicketCategories.belongsTo(MraUsers, { as: "creator_mra_user", foreignKey: "creator"});
 		MraUsers.hasMany(MraTicketCategories, { as: "mra_ticket_categories", foreignKey: "creator"});
 		MraTicketCategories.belongsTo(MraUsers, { as: "updator_mra_user", foreignKey: "updator"});
 		MraUsers.hasMany(MraTicketCategories, { as: "updator_mra_ticket_categories", foreignKey: "updator"});
 		MraTicketComments.belongsTo(MraUsers, { as: "creator_mra_user", foreignKey: "creator"});
 		MraUsers.hasMany(MraTicketComments, { as: "mra_ticket_comments", foreignKey: "creator"});
+		MraTicketComments.belongsTo(MraUsers, { as: "updator_mra_user", foreignKey: "updator"});
+		MraUsers.hasMany(MraTicketComments, { as: "updator_mra_ticket_comments", foreignKey: "updator"});
 		MraTicketHistory.belongsTo(MraUsers, { as: "caused_by_mra_user", foreignKey: "caused_by"});
 		MraUsers.hasMany(MraTicketHistory, { as: "mra_ticket_histories", foreignKey: "caused_by"});
 		MraTicketReactions.belongsTo(MraUsers, { as: "creator_mra_user", foreignKey: "creator"});
@@ -371,7 +377,6 @@ function initModels(sequelize) {
 				MraTicketReactionTypes,
 				MraTicketReactions,
 				MraTickets,
-				MraTokenBlacklist,
 				MraTransitionConditions,
 				MraUserCities,
 				MraUserCustomers,

@@ -71,12 +71,12 @@ module.exports = function(sequelize, DataTypes) {
 						allowNull: true,
 						comment: "Reason for the ticket closure."
 				},
-				latitude: {
+				geo_latitude: {
 						type: DataTypes.DECIMAL,
 						allowNull: true,
 						comment: "Latitude coordinate of the ticket location."
 				},
-				longitude: {
+				geo_longitude: {
 						type: DataTypes.DECIMAL,
 						allowNull: true,
 						comment: "Longitude coordinate of the ticket location."
@@ -98,7 +98,7 @@ module.exports = function(sequelize, DataTypes) {
 				created_at: {
 						type: DataTypes.DATE,
 						allowNull: false,
-						defaultValue: Sequelize.Sequelize.literal("(now() AT TIME ZONE 'UTC')"),
+						defaultValue: Sequelize.Sequelize.fn('now'),
 						comment: "Timestamp of when the ticket was submitted."
 				},
 				updator: {

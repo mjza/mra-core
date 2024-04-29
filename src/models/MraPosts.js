@@ -37,12 +37,12 @@ module.exports = function(sequelize, DataTypes) {
 						allowNull: true,
 						comment: "PostgreSQL JSONB type for storing media URLs and additional details about the post."
 				},
-				latitude: {
+				geo_latitude: {
 						type: DataTypes.DECIMAL,
 						allowNull: true,
 						comment: "Latitude coordinate for the location of the post."
 				},
-				longitude: {
+				geo_longitude: {
 						type: DataTypes.DECIMAL,
 						allowNull: true,
 						comment: "Longitude coordinate for the location of the post."
@@ -98,7 +98,7 @@ module.exports = function(sequelize, DataTypes) {
 				created_at: {
 						type: DataTypes.DATE,
 						allowNull: false,
-						defaultValue: Sequelize.Sequelize.literal("(now() AT TIME ZONE 'UTC')"),
+						defaultValue: Sequelize.Sequelize.fn('now'),
 						comment: "Timestamp when the post was created."
 				},
 				updator: {

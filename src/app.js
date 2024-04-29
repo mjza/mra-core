@@ -113,6 +113,7 @@ async function createApp() {
         },
         tags: [
             { name: '1st', description: 'User Details' },
+            { name: '2nd', description: 'Tickets' },
         ],
     };
 
