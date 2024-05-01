@@ -69,21 +69,28 @@ const deleteAuditLog = async (logId) => {
 };
 
 /**
- * Retrieves user details from the database based on the provided conditions.
+ * Retrieves user details from the database based on the provided conditions and pagination settings.
  *
  * This function queries the database for user details matching the specified conditions
- * and returns an array of user details objects. The conditions object can contain `where`
- * clauses to specify the query criteria.
+ * and supports pagination by using a limit and offset. It fetches one additional record beyond the limit
+ * to determine the presence of subsequent pages. This additional record is not returned in the results.
  *
- * @param {object} where - The object contain `where` clauses to specify the search criteria.
- * @returns {Object[]} An array of user details objects. Each object contains user details 
- *                     such as user_id, first_name, middle_name, last_name, gender_id, date_of_birth, 
- *                     profile_picture_url, profile_picture_thumbnail_url, creator, created_at, updator, 
- *                     and updated_at. If no users are found matching the conditions, an empty array is returned.
+ * @param {object} where - The object containing `where` clauses to specify the search criteria.
+ * @param {object} pagination - The pagination settings containing 'limit' and 'offset'.
+ *                              'limit' defines the number of user details to fetch.
+ *                              'offset' specifies the number of user details to skip.
+ * @returns {Object[]} An array of user details objects. Each object contains details such as
+ *                     user_id, first_name, middle_name, last_name, gender_id, date_of_birth,
+ *                     profile_picture_url, profile_picture_thumbnail_url, creator, created_at,
+ *                     updator, and updated_at. The length of the array is `limit + 1` if more items
+ *                     are available, allowing the caller to determine if additional pages exist.
  */
-async function getUserDetails(where) {
+async function getUserDetails(where, pagination) {
+  const { limit, offset } = pagination;
   const userDetails = await MraUserDetails.findAll({
     where,
+    limit: limit + 1,
+    offset,
     include: [{
       model: MraGenderTypes,
       as: "gender",
@@ -105,7 +112,7 @@ async function createUserDetails(userDetails) {
   const createdRow = await MraUserDetails.create(userDetails);
 
   if (createdRow && createdRow.user_id) {
-    const userDetails = await getUserDetails({ user_id: createdRow.user_id });
+    const userDetails = await getUserDetails({ user_id: createdRow.user_id }, { limit: 0, offset: 0 });
     return userDetails && userDetails[0];
   } else {
     return null;
@@ -123,7 +130,7 @@ async function updateUserDetails(where, userDetails) {
   const [affectedRowCount] = await MraUserDetails.update(userDetails, { where });
 
   if (affectedRowCount > 0) {
-    const userDetails = await getUserDetails(where);
+    const userDetails = await getUserDetails(where, { limit: 0, offset: 0 });
     return userDetails && userDetails[0];
   } else {
     return null;

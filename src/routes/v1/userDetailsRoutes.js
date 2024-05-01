@@ -120,7 +120,7 @@ const secretProperties = [
  * /v1/user_details:
  *   get:
  *     summary: Retrieve user details
- *     description: Get the details of multiple users based on the provided conditions. Returns details of the user whose ID matches the one in the JWT if no specific userId is provided.
+ *     description: Get the details of multiple users based on the provided conditions and pagination. If no specific userId is provided, details of the user whose ID matches the one in the JWT are returned. The response includes a flag to indicate if more records are available.
  *     tags: [1st]
  *     security:
  *       - bearerAuth: []
@@ -131,15 +131,35 @@ const secretProperties = [
  *         schema:
  *           type: integer
  *         description: Optional user ID to retrieve details for a specific user.
+ *       - in: query
+ *         name: page
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number of the user details to retrieve.
+ *       - in: query
+ *         name: limit
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           default: 30
+ *         description: Maximum number of user details to return in one response.
  *     responses:
  *       200:
- *         description: User details retrieved successfully.
+ *         description: User details retrieved successfully, with an indicator if additional pages are available.
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/responses/UserDetailsObject'
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/responses/UserDetailsObject'
+ *                 hasMore:
+ *                   type: boolean
+ *                   description: Indicates if more data is available beyond the current page.
  *       401:
  *         $ref: '#/components/responses/UnauthorizedAccessInvalidTokenProvided'
  *       404:
@@ -162,12 +182,26 @@ router.get('/user_details', apiRequestLimiter,
     query('userId')
       .optional({ checkFalsy: true })
       .isNumeric().withMessage('UserId must be a number.'),
+    query('page')
+      .optional({ checkFalsy: true })
+      .isNumeric().withMessage('Page must be a number')
+      .toInt(),
+    query('limit')
+      .optional({ checkFalsy: true })
+      .isNumeric().withMessage('Limit must be a number')
+      .toInt(),  
   ],
   (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
+    const page = req.query.page || 1;
+    const limit = req.query.limit || 30;
+    req.pagination = {
+      limit,
+      offset: (page - 1) * limit
+    };
     next();
   },
   (req, res, next) => {
@@ -177,16 +211,21 @@ router.get('/user_details', apiRequestLimiter,
   },
   async (req, res) => {
     try {
-      const userDetailsArray = await db.getUserDetails(req.conditions.where);
+      const userDetailsArray = await db.getUserDetails(req.conditions.where, req.pagination);
 
       if (!userDetailsArray || userDetailsArray.length === 0) {
         return res.status(404).json({ message: 'User details not found' });
       }
 
-      const decryptedDataArray = userDetailsArray.map(userDetails =>
+      // Determine if there are more items beyond the current page
+      const hasMore = userDetailsArray.length > req.pagination.limit;
+      const results = hasMore ? userDetailsArray.slice(0, -1) : userDetailsArray; // Remove the extra item if present
+
+      const decryptedDataArray = results.map(userDetails =>
         toLowerCamelCase(decryptObjectItems(userDetails, secretProperties))
       );
-      return res.json(decryptedDataArray);
+
+      return res.json({ data: decryptedDataArray, hasMore });
     } catch (err) {
       updateEventLog(req, err);
       return res.status(500).json({ message: err.message });

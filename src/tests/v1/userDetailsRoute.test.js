@@ -143,9 +143,10 @@ describe('/user_details endpoints', () => {
             const res = await request(app).get('/v1/user_details').set('Authorization', `Bearer ${authData.token}`);
             expect(res.statusCode).toEqual(200);
             expect(res.body).not.toBeNull();
-            expect(Array.isArray(res.body)).toBeTruthy();
-            expect(res.body.length).toBe(1);
-            const item = res.body[0];
+            expect(Array.isArray(res.body.data)).toBeTruthy();
+            expect(res.body.data.length).toBe(1);
+            expect(res.body.hasMore).toBeFalsy();
+            const item = res.body.data[0];
             expect(item.firstName).toBe(userDetails.firstName);
             expect(item.middleName).toBe(userDetails.middleName);
             expect(item.lastName).toBe(userDetails.lastName);
