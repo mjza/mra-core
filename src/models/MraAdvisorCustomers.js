@@ -29,7 +29,7 @@ module.exports = function(sequelize, DataTypes) {
 				valid_from: {
 						type: DataTypes.DATE,
 						allowNull: false,
-						defaultValue: Sequelize.Sequelize.literal("(now() AT TIME ZONE 'UTC')"),
+						defaultValue: Sequelize.Sequelize.fn('now'),
 						comment: "The start date from which the advisor-customer relationship is valid."
 				},
 				valid_to: {
@@ -49,7 +49,7 @@ module.exports = function(sequelize, DataTypes) {
 				created_at: {
 						type: DataTypes.DATE,
 						allowNull: false,
-						defaultValue: Sequelize.Sequelize.literal("(now() AT TIME ZONE 'UTC')"),
+						defaultValue: Sequelize.Sequelize.fn('now'),
 						comment: "Timestamp of when the advisor-customer relationship record was created."
 				},
 				updator: {

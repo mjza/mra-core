@@ -29,7 +29,7 @@ module.exports = function(sequelize, DataTypes) {
 				start_date: {
 						type: DataTypes.DATE,
 						allowNull: false,
-						defaultValue: Sequelize.Sequelize.literal("(now() AT TIME ZONE 'UTC')"),
+						defaultValue: Sequelize.Sequelize.fn('now'),
 						comment: "Start date of the subscription."
 				},
 				end_date: {
@@ -46,7 +46,7 @@ module.exports = function(sequelize, DataTypes) {
 				renewal_date: {
 						type: DataTypes.DATE,
 						allowNull: true,
-						defaultValue: Sequelize.Sequelize.literal('((now() AT TIME ZONE UTC'),
+						defaultValue: Sequelize.Sequelize.literal('(now() + 1 year'),
 						comment: "Date for the next renewal. Null implies no auto-renewal."
 				},
 				discount_type_id: {
@@ -90,7 +90,7 @@ module.exports = function(sequelize, DataTypes) {
 				created_at: {
 						type: DataTypes.DATE,
 						allowNull: false,
-						defaultValue: Sequelize.Sequelize.literal("(now() AT TIME ZONE 'UTC')"),
+						defaultValue: Sequelize.Sequelize.fn('now'),
 						comment: "Timestamp when the subscription was created."
 				},
 				updator: {

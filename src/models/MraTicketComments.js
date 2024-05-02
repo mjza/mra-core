@@ -34,8 +34,17 @@ module.exports = function(sequelize, DataTypes) {
 				created_at: {
 						type: DataTypes.DATE,
 						allowNull: false,
-						defaultValue: Sequelize.Sequelize.literal("(now() AT TIME ZONE 'UTC')"),
+						defaultValue: Sequelize.Sequelize.fn('now'),
 						comment: "Timestamp of when the comment was created."
+				},
+				updator: {
+						type: DataTypes.INTEGER,
+						allowNull: true,
+						comment: "References mra_users. The person who registered the dischargement. Nullable.",
+						references: {
+								model: 'mra_users',
+								key: 'user_id'
+						}
 				},
 				updated_at: {
 						type: DataTypes.DATE,

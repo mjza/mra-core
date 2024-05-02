@@ -47,7 +47,7 @@ module.exports = function(sequelize, DataTypes) {
 				recorded_at: {
 						type: DataTypes.DATE,
 						allowNull: false,
-						defaultValue: Sequelize.Sequelize.literal("(now() AT TIME ZONE 'UTC')"),
+						defaultValue: Sequelize.Sequelize.fn('now'),
 						comment: "Timestamp of when the new history entry was recorded. The latest entry indicates the current status of the ticket."
 				}
 		}, {

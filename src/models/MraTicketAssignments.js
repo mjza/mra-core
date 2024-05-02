@@ -17,6 +17,15 @@ module.exports = function(sequelize, DataTypes) {
 								key: 'ticket_id'
 						}
 				},
+				customer_id: {
+						type: DataTypes.INTEGER,
+						allowNull: false,
+						comment: "References mra_customers. Ticket might transfer between customers. Then we can see the workflow from point X to Y in a specific cutomer.",
+						references: {
+								model: 'mra_customers',
+								key: 'customer_id'
+						}
+				},
 				agent_id: {
 						type: DataTypes.INTEGER,
 						allowNull: false,
@@ -26,7 +35,12 @@ module.exports = function(sequelize, DataTypes) {
 								key: 'user_id'
 						}
 				},
-				assigner: {
+				discharged_at: {
+						type: DataTypes.DATE,
+						allowNull: true,
+						comment: "Timestamp of when the ticket was discharged from the agent. Nullable."
+				},
+				creator: {
 						type: DataTypes.INTEGER,
 						allowNull: false,
 						comment: "References mra_users. The person who registered the assignment.",
@@ -35,13 +49,13 @@ module.exports = function(sequelize, DataTypes) {
 								key: 'user_id'
 						}
 				},
-				assigned_at: {
+				created_at: {
 						type: DataTypes.DATE,
 						allowNull: false,
-						defaultValue: Sequelize.Sequelize.literal("(now() AT TIME ZONE 'UTC')"),
+						defaultValue: Sequelize.Sequelize.fn('now'),
 						comment: "Timestamp of when the ticket was assigned to the agent."
 				},
-				discharger: {
+				updator: {
 						type: DataTypes.INTEGER,
 						allowNull: true,
 						comment: "References mra_users. The person who registered the dischargement. Nullable.",
@@ -50,15 +64,16 @@ module.exports = function(sequelize, DataTypes) {
 								key: 'user_id'
 						}
 				},
-				discharged_at: {
+				updated_at: {
 						type: DataTypes.DATE,
 						allowNull: true,
-						comment: "Timestamp of when the ticket was discharged from the agent. Nullable."
+						comment: "Timestamp of when the ticket was discharged from the agent."
 				}
 		}, {
 				sequelize,
 				tableName: 'mra_ticket_assignments',
 				schema: 'public',
+				hasTrigger: true,
 				timestamps: false,
 				underscored: true,
 				freezeTableName: true,

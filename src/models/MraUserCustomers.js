@@ -19,7 +19,7 @@ module.exports = function(sequelize, DataTypes) {
 				},
 				customer_id: {
 						type: DataTypes.INTEGER,
-						allowNull: true,
+						allowNull: false,
 						comment: "Refers to the customer, linked to mra_customers. The customer can remove the subscription and is the owner of the record.",
 						references: {
 								model: 'mra_customers',
@@ -39,7 +39,7 @@ module.exports = function(sequelize, DataTypes) {
 				valid_from: {
 						type: DataTypes.DATE,
 						allowNull: false,
-						defaultValue: Sequelize.Sequelize.literal("(now() AT TIME ZONE 'UTC')"),
+						defaultValue: Sequelize.Sequelize.fn('now'),
 						comment: "The start date from which the user-customer relationship is valid."
 				},
 				valid_to: {
@@ -69,7 +69,7 @@ module.exports = function(sequelize, DataTypes) {
 				created_at: {
 						type: DataTypes.DATE,
 						allowNull: false,
-						defaultValue: Sequelize.Sequelize.literal("(now() AT TIME ZONE 'UTC')"),
+						defaultValue: Sequelize.Sequelize.fn('now'),
 						comment: "Timestamp of when the user-customer relationship record was created."
 				},
 				updator: {

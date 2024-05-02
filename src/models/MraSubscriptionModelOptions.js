@@ -38,7 +38,7 @@ module.exports = function(sequelize, DataTypes) {
 				created_at: {
 						type: DataTypes.DATE,
 						allowNull: false,
-						defaultValue: Sequelize.Sequelize.literal("(now() AT TIME ZONE 'UTC')"),
+						defaultValue: Sequelize.Sequelize.fn('now'),
 						comment: "Timestamp when this model-option association was created."
 				},
 				updator: {

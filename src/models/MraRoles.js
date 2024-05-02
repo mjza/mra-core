@@ -13,9 +13,15 @@ module.exports = function(sequelize, DataTypes) {
 						allowNull: false,
 						comment: "The name of the role. This should be unique within the context of a single customer."
 				},
+				weight: {
+						type: DataTypes.INTEGER,
+						allowNull: false,
+						defaultValue: 0
+				},
 				customer_id: {
 						type: DataTypes.INTEGER,
 						allowNull: false,
+						defaultValue: 0,
 						comment: "References the customer_id from the Customer table. Indicates the customer to which the role belongs. Allows 0 for internal use or IDs that refer to actual customer records."
 				},
 				customer_access_allowed: {

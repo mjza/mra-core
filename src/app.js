@@ -44,15 +44,18 @@ async function createApp() {
     // Failing to do so can prevent middlewares like express-rate-limit from accurately 
     // identifying users, leading to potential issues with rate limiting.    
     app.set('trust proxy', 1);
-    
+
     // Built-in middleware for parsing JSON and URL-encoded bodies
     app.use(express.json());
     app.use(express.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded
     // Cookie-parser middleware for parsing cookies
     app.use(cookieParser());
 
-    // This will enable CORS for all routes
-    const allowedOrigins = [process.env.BASE_URL || localhost, 'http://localhost:2583', 'https://myreportapp.com'];
+    // This will enable CORS for specific routes
+    const defaultUrl = process.env.BASE_URL || localhost;
+    const allowedUrlsEnv = process.env.CORS_ALLOWED_URLS || '';
+    const allowedUrls = allowedUrlsEnv.split(',').map(url => url.trim());
+    const allowedOrigins = [defaultUrl, ...allowedUrls];
 
     const corsOptions = {
         origin: function (origin, callback) {
@@ -88,62 +91,67 @@ async function createApp() {
     // Use routes
     app.use('/v1', v1Routes);
 
-    // Swagger definition
-    const swaggerDefinition = {
-        openapi: '3.0.0',
-        info: {
-            title: 'Express Core API',
-            version: '1.0.0',
-            description: 'A CRUD Core API',
-        },
-        servers: [
-            {
-                url: (process.env.BASE_URL || localhost),
-                description: 'Core Microservice',
-            }
-        ],
-        components: {
-            securitySchemes: {
-                bearerAuth: {
-                    type: 'http',
-                    scheme: 'bearer',
-                    bearerFormat: 'JWT',
+    // Conditionally include Swagger UI middleware based on environment
+    if (process.env.NODE_ENV !== 'production') {
+
+        // Swagger definition
+        const swaggerDefinition = {
+            openapi: '3.0.0',
+            info: {
+                title: 'Express Core API',
+                version: '1.0.0',
+                description: 'A CRUD Core API',
+            },
+            servers: [
+                {
+                    url: (process.env.BASE_URL || localhost),
+                    description: 'Core Microservice',
+                }
+            ],
+            components: {
+                securitySchemes: {
+                    bearerAuth: {
+                        type: 'http',
+                        scheme: 'bearer',
+                        bearerFormat: 'JWT',
+                    },
                 },
             },
-        },
-        tags: [
-            { name: '1st', description: 'User Details' },
-            { name: '2nd', description: 'Tickets' },
-        ],
-    };
+            tags: [
+                { name: '1st', description: 'User Details' },
+                { name: '2nd', description: 'Tickets' },
+            ],
+        };
 
-    // Options for the swagger docs
-    const v1SwaggerOptions = {
-        swaggerDefinition,
-        // Absolute paths to files containing Swagger annotations
-        apis: ['src/routes/v1/*.js', 'src/utils/*.js'],
-    };
+        // Options for the swagger docs
+        const v1SwaggerOptions = {
+            swaggerDefinition,
+            // Absolute paths to files containing Swagger annotations
+            apis: ['src/routes/v1/*.js', 'src/utils/*.js'],
+        };
 
-    // Initialize swagger-jsdoc
-    const v1SwaggerSpec = swaggerJSDoc(v1SwaggerOptions);
+        // Initialize swagger-jsdoc
+        const v1SwaggerSpec = swaggerJSDoc(v1SwaggerOptions);
 
-    if (typeof process.env.DOC_USER === 'undefined' || typeof process.env.DOC_PASS === 'undefined') {
-        console.error('Environment variable DOC_USER or DOC_PASS is not defined.');
-        process.exit(1); // Exits the application with an error code
+        if (typeof process.env.DOC_USER === 'undefined' || typeof process.env.DOC_PASS === 'undefined') {
+            console.error('Environment variable DOC_USER or DOC_PASS is not defined.');
+            process.exit(1); // Exits the application with an error code
+        }
+
+        // Basic auth credentials for accessing Swaggar
+        const users = {};
+        users[process.env.DOC_USER] = process.env.DOC_PASS;
+
+
+        // Use swaggerUi to serve swagger docs
+        app.use('/v1' + process.env.DOC_URL, basicAuth({
+            users,
+            challenge: true // Causes browsers to show a login dialog
+        }), swaggerUi.serve, swaggerUi.setup(v1SwaggerSpec, {
+            customSiteTitle: "Core API"
+        }));
     }
-
-    // Basic auth credentials for accessing Swaggar
-    const users = {};
-    users[process.env.DOC_USER] = process.env.DOC_PASS;
-
-    // Use swaggerUi to serve swagger docs
-    app.use('/v1' + process.env.DOC_URL, basicAuth({
-        users,
-        challenge: true // Causes browsers to show a login dialog
-    }), swaggerUi.serve, swaggerUi.setup(v1SwaggerSpec, {
-        customSiteTitle: "Core API"
-    }));
-
+    
     // configure Express to serve static files 
     app.use(express.static('public'));
 

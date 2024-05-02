@@ -43,7 +43,7 @@ module.exports = function(sequelize, DataTypes) {
 				transaction_date: {
 						type: DataTypes.DATE,
 						allowNull: false,
-						defaultValue: Sequelize.Sequelize.literal("(now() AT TIME ZONE 'UTC')"),
+						defaultValue: Sequelize.Sequelize.fn('now'),
 						comment: "Date and time of the transaction."
 				},
 				transaction_status: {

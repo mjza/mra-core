@@ -1,7 +1,6 @@
 var DataTypes = require("sequelize").DataTypes;
 var _MraActions = require("./MraActions");
 var _MraAdvisorCustomers = require("./MraAdvisorCustomers");
-var _MraAuditLogsAuthentication = require("./MraAuditLogsAuthentication");
 var _MraAuditLogsCore = require("./MraAuditLogsCore");
 var _MraConditionFields = require("./MraConditionFields");
 var _MraConditionTypes = require("./MraConditionTypes");
@@ -56,7 +55,6 @@ var _MragWofPlaceTypes = require("./MragWofPlaceTypes");
 function initModels(sequelize) {
 		var MraActions = _MraActions(sequelize, DataTypes);
 		var MraAdvisorCustomers = _MraAdvisorCustomers(sequelize, DataTypes);
-		var MraAuditLogsAuthentication = _MraAuditLogsAuthentication(sequelize, DataTypes);
 		var MraAuditLogsCore = _MraAuditLogsCore(sequelize, DataTypes);
 		var MraConditionFields = _MraConditionFields(sequelize, DataTypes);
 		var MraConditionTypes = _MraConditionTypes(sequelize, DataTypes);
@@ -340,7 +338,6 @@ function initModels(sequelize) {
 		return {
 				MraActions,
 				MraAdvisorCustomers,
-				MraAuditLogsAuthentication,
 				MraAuditLogsCore,
 				MraConditionFields,
 				MraConditionTypes,

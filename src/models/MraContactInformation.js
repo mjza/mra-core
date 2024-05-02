@@ -50,6 +50,31 @@ module.exports = function(sequelize, DataTypes) {
 						allowNull: true,
 						defaultValue: false,
 						comment: "Indicates whether this is the primary contact information for the associated user or customer."
+				},
+				creator: {
+						type: DataTypes.INTEGER,
+						allowNull: false,
+						references: {
+								model: 'mra_users',
+								key: 'user_id'
+						}
+				},
+				created_at: {
+						type: DataTypes.DATE,
+						allowNull: false,
+						defaultValue: Sequelize.Sequelize.fn('now')
+				},
+				updator: {
+						type: DataTypes.INTEGER,
+						allowNull: true,
+						references: {
+								model: 'mra_users',
+								key: 'user_id'
+						}
+				},
+				updated_at: {
+						type: DataTypes.DATE,
+						allowNull: true
 				}
 		}, {
 				sequelize,

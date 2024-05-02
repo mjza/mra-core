@@ -69,13 +69,13 @@ module.exports = function(sequelize, DataTypes) {
 				valid_from: {
 						type: DataTypes.DATE,
 						allowNull: false,
-						defaultValue: Sequelize.Sequelize.literal("(now() AT TIME ZONE 'UTC')"),
+						defaultValue: Sequelize.Sequelize.fn('now'),
 						comment: "Start date from which the subscription model offer is valid."
 				},
 				valid_to: {
 						type: DataTypes.DATE,
 						allowNull: false,
-						defaultValue: Sequelize.Sequelize.literal('((now() AT TIME ZONE UTC'),
+						defaultValue: Sequelize.Sequelize.literal('(now() + 3 years'),
 						comment: "End date until which the subscription model offer is valid."
 				},
 				creator: {
@@ -90,7 +90,7 @@ module.exports = function(sequelize, DataTypes) {
 				created_at: {
 						type: DataTypes.DATE,
 						allowNull: false,
-						defaultValue: Sequelize.Sequelize.literal("(now() AT TIME ZONE 'UTC')"),
+						defaultValue: Sequelize.Sequelize.fn('now'),
 						comment: "Timestamp when the subscription model was created."
 				},
 				updator: {

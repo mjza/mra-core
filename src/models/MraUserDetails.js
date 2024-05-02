@@ -51,11 +51,6 @@ module.exports = function(sequelize, DataTypes) {
 						allowNull: true,
 						comment: "Encrypted data, contains URL of the thumbnail version of the profile picture of the user"
 				},
-				display_name: {
-						type: DataTypes.TEXT,
-						allowNull: true,
-						comment: "Not encrypted data, contains the name that user wants to display for other people publicly"
-				},
 				public_profile_picture_thumbnail_url: {
 						type: DataTypes.TEXT,
 						allowNull: true,
@@ -73,7 +68,7 @@ module.exports = function(sequelize, DataTypes) {
 				created_at: {
 						type: DataTypes.DATE,
 						allowNull: false,
-						defaultValue: Sequelize.Sequelize.literal("(now() AT TIME ZONE 'UTC')"),
+						defaultValue: Sequelize.Sequelize.fn('now'),
 						comment: "Timestamp of when this record was created."
 				},
 				updator: {

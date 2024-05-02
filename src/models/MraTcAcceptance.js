@@ -29,7 +29,7 @@ module.exports = function(sequelize, DataTypes) {
 				accepted_at: {
 						type: DataTypes.DATE,
 						allowNull: false,
-						defaultValue: Sequelize.Sequelize.literal("(now() AT TIME ZONE 'UTC')"),
+						defaultValue: Sequelize.Sequelize.fn('now'),
 						comment: "Timestamp of when the terms and conditions were accepted."
 				}
 		}, {

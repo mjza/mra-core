@@ -2,14 +2,26 @@
 
 const fs = require('fs');
 const path = require('path');
-const Sequelize = require('sequelize');
+const { Sequelize, fn, col, where } = require('sequelize');
 const process = require('process');
 const initModels = require('./init-models');
+const filePath = path.join(__dirname, '../../logs/sequelize.log');
 
 /**
  * Stream for logging Sequelize messages to a file.
  */
-const logStream = fs.createWriteStream(path.join(__dirname, '../../logs/sequelize.log'), { flags: 'a' });
+try {
+  if (process.env.NODE_ENV === 'development') {
+    if (!fs.existsSync(filePath)) {
+      fs.writeFileSync(filePath, '');
+    } else {
+      fs.truncateSync(filePath, 0);
+    }
+  }
+} catch (err) {
+  console.error('Error creating or truncating log file:', err);
+}
+const logStream = fs.createWriteStream(filePath, { flags: 'a' });
 
 /**
  * Logs a message to the sequelize log file.
@@ -26,12 +38,27 @@ const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, proces
   host: process.env.DB_HOST,
   dialect: 'postgres',
   dialectOptions: {
+    useUTC: true, // for reading from database
     ssl: process.env.NODE_ENV !== 'development' ? {
       require: true,
       rejectUnauthorized: false
     } : false,
   },
+  timezone: '+00:00', // for writing to database
   logging: process.env.NODE_ENV === 'development' ? logToFileStream : false,
+  hooks: {
+    afterConnect: (connection, config) => {
+      return new Promise((resolve, reject) => {
+        connection.query("SET TIME ZONE 'UTC';", (err) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve();
+          }
+        });
+      });
+    }
+  },
 });
 
 /**
@@ -52,5 +79,8 @@ module.exports = {
   ...models,
   sequelize,
   Sequelize,
+  fn,
+  col,
+  where,
   closeSequelize,
 };
