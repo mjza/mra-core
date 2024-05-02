@@ -1,4 +1,4 @@
-const { Sequelize, closeSequelize, MraUsers, MraAuditLogsCore, MraGenderTypes, MraUserDetails, MraTickets, MraCustomers } = require('../models');
+const { Sequelize, closeSequelize, MraUsers, MraAuditLogsCore, MraGenderTypes, MraUserDetails, MraTickets, MraCustomers, MraTicketCategories } = require('../models');
 
 /**
  * Closes the database connection pool.
@@ -248,28 +248,42 @@ const activateUser = async (user) => {
  */
 async function getTickets(where) {
   const tickets = await MraTickets.findAll({
-      where,
-      include: [{
-          model: MraCustomers,
-          as: 'customer',
-          attributes: ['customer_id', 'customer_name'],
-      }, {
-          model: MraTicketCategories,
-          as: 'category',
-          attributes: ['ticket_category_id', 'category_name'],
-      }, {
-          model: MraUsers,
-          as: 'publisherDetails',
-          attributes: ['user_id', 'username'],
-      }],
-      attributes: [
-          'ticket_id', 'title', 'body', 'customer_id', 'ticket_category_id', 'is_confidential',
-          'media_urls', 'publisher', 'published_at', 'closed_at', 'close_reason',
-          'geo_latitude', 'geo_longitude', 'geo_location', 'creator', 'created_at', 'updator', 'updated_at'
-      ],
+    where,
+    include: [{
+      model: MraCustomers,
+      as: 'customer',
+      attributes: ['customer_id', 'customer_name'],
+    }, {
+      model: MraTicketCategories,
+      as: 'ticket_category',
+      attributes: ['ticket_category_id', 'ticket_category_name'],
+    }, {
+      model: MraUsers,
+      as: 'publisher_mra_user',
+      attributes: ['user_id', 'username'],
+    }, {
+      model: MraUsers,
+      as: 'creator_mra_user',
+      attributes: ['user_id', 'username'],
+    }, {
+      model: MraUsers,
+      as: 'updator_mra_user',
+      attributes: ['user_id', 'username'],
+    }],
+    attributes: [
+      'ticket_id', 'title', 'body', 'is_confidential',
+      'media_urls', 'publisher', 'published_at', 'closed_at', 'close_reason',
+      'geo_latitude', 'geo_longitude', 'geo_location', 'creator', 'created_at', 'updator', 'updated_at'
+    ],
   });
 
-  return tickets.map(ticket => ticket.get({ plain: true }));
+  return tickets.map(ticket => ({
+    ...ticket.get({ plain: true }),
+    publisher: ticket.publisher_mra_user,
+    creator: ticket.creator_mra_user,
+    updator: ticket.updator_mra_user,
+    // Remove the original keys if you don't need them in the output
+  })).map(({ publisher_mra_user, creator_mra_user, updator_mra_user, ...rest }) => rest);
 }
 
 /**
@@ -282,10 +296,10 @@ async function createTicket(ticket) {
   const createdTicket = await MraTickets.create(ticket);
 
   if (createdTicket && createdTicket.ticket_id) {
-      const tickets = await getTickets({ ticket_id: createdTicket.ticket_id });
-      return tickets[0];
+    const tickets = await getTickets({ ticket_id: createdTicket.ticket_id });
+    return tickets[0];
   } else {
-      return null;
+    return null;
   }
 }
 
@@ -300,10 +314,10 @@ async function updateTicket(where, ticket) {
   const [affectedRowCount] = await MraTickets.update(ticket, { where });
 
   if (affectedRowCount > 0) {
-      const updatedTickets = await getTickets(where);
-      return updatedTickets[0];
+    const updatedTickets = await getTickets(where);
+    return updatedTickets[0];
   } else {
-      return null;
+    return null;
   }
 }
 
@@ -322,7 +336,7 @@ module.exports = {
   closeDBConnections,
   insertAuditLog,
   updateAuditLog,
-  deleteAuditLog,  
+  deleteAuditLog,
   getUserByUserId,
   getUserByUsername,
   deleteUserByUsername,
