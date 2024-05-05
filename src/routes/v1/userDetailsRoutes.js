@@ -17,7 +17,6 @@ const optionalProperties = [
   'date_of_birth',
   'profile_picture_url',
   'profile_picture_thumbnail_url',
-  'display_name',
   'public_profile_picture_thumbnail_url'
 ];
 
@@ -56,8 +55,6 @@ const secretProperties = [
  *                 type: string
  *               profilePictureThumbnailUrl:
  *                 type: string
- *               displayName:
- *                 type: string
  *               publicProfilePictureThumbnailUrl:
  *                 type: string
  *   responses:
@@ -83,8 +80,6 @@ const secretProperties = [
  *         profilePictureThumbnailUrl:
  *           type: string
  *           example: "https://abc.com/pic2.jpg"
- *         displayName:
- *           type: string
  *         publicProfilePictureThumbnailUrl:
  *           type: string
  *           example: "https://abc.com/pic3.jpg"
@@ -271,9 +266,6 @@ router.get('/user_details', apiRequestLimiter,
  *               profilePictureThumbnailUrl:
  *                 type: string
  *                 example: "https://abc.com/pic2.jpg"
- *               displayName:
- *                 type: string
- *                 example: "Docky"
  *               publicProfilePictureThumbnailUrl:
  *                 type: string
  *                 example: "https://abc.com/pic3.jpg"
@@ -399,13 +391,6 @@ router.post('/user_details', apiRequestLimiter,
       .isLength({ max: 255 })
       .withMessage('Profile picture thumbnail URL must not exceed 255 characters.'),
 
-    body('displayName')
-      .optional()
-      .isString()
-      .withMessage('Display name must be a string.')
-      .isLength({ max: 255 })
-      .withMessage('Display name must not exceed 255 characters.'),
-
     body('publicProfilePictureThumbnailUrl')
       .optional()
       .isString()
@@ -507,9 +492,6 @@ router.post('/user_details', apiRequestLimiter,
  *               profilePictureThumbnailUrl:
  *                 type: string
  *                 example: "https://abc.com/pic2.jpg"
- *               displayName:
- *                 type: string
- *                 example: "Mocky"
  *               publicProfilePictureThumbnailUrl:
  *                 type: string
  *                 example: "https://abc.com/pic3.jpg"
@@ -630,13 +612,6 @@ router.put('/user_details/:userId', apiRequestLimiter,
       .withMessage('Profile picture thumbnail URL must be a valid URL.')
       .isLength({ max: 255 })
       .withMessage('Profile picture thumbnail URL must not exceed 255 characters.'),
-
-    body('displayName')
-      .optional()
-      .isString()
-      .withMessage('Display name must be a string.')
-      .isLength({ max: 255 })
-      .withMessage('Display name must not exceed 255 characters.'),
 
     body('publicProfilePictureThumbnailUrl')
       .optional()
