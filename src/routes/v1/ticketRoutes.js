@@ -1,17 +1,19 @@
-const { body, validationResult } = require('express-validator');
+const { body } = require('express-validator');
+const { toLowerCamelCase, toSnakeCase } = require('../../utils/converters');
 const router = require('express').Router();
 const db = require('../../utils/database');
 const { apiRequestLimiter } = require('../../utils/rateLimit');
 const { updateEventLog } = require('../../utils/logger');
+const { authorizeUser, checkRequestValidity } = require('../../utils/validations');
 
 /**
  * @swagger
  * components:
- *   schemas:
+ *   response:
  *     TicketResponse:
  *       type: object
  *       properties:
- *         ticket_id:
+ *         ticketId:
  *           type: integer
  *           description: ID of the created ticket
  *         title:
@@ -20,39 +22,134 @@ const { updateEventLog } = require('../../utils/logger');
  *         body:
  *           type: string
  *           description: Detailed description of the ticket
- *         customer_id:
- *           type: integer
- *           description: ID of the customer associated with this ticket
- *         ticket_category_id:
- *           type: integer
- *           description: ID of the ticket category
- *         is_confidential:
+ *         customer:
+ *           type: object
+ *           description: Information of the customer associated with this ticket
+ *           properties:
+ *             customerId:
+ *               type: integer
+ *               example: 1
+ *               description: ID of the customer associated with this ticket.
+ *             customerName:
+ *               type: string
+ *               example: "Calgary CityHall"
+ *               description: Name of the customer associated with this ticket.  
+ *         ticketCategory:
+ *           type: object
+ *           description: Information of the ticket category
+ *           properties:
+ *             ticketCategoryId:
+ *               type: integer
+ *               example: 1
+ *               description: ID of the ticket category.
+ *             ticketCategoryName:
+ *               type: string
+ *               example: "Public Transportation Issues"
+ *               description: Name of the ticket category. 
+ *         isConfidential:
  *           type: boolean
  *           description: Indicates if the ticket is confidential
- *         media_urls:
+ *         mediaUrls:
  *           type: array
  *           items:
  *             type: string
+ *             example: "http://example.com/image1.jpg"
  *           description: Array of media URLs associated with the ticket
- *         latitude:
+ *         geoLatitude:
  *           type: number
  *           format: float
  *           description: Latitude coordinate of the ticket's location
- *         longitude:
+ *         geoLongitude:
  *           type: number
  *           format: float
  *           description: Longitude coordinate of the ticket's location
- *         geo_location:
- *           type: string
- *           description: Geospatial data point representing the ticket's location
+ *         geoLocation:
+ *           type: object
+ *           description: Geospatial data point representing the ticket's location.
+ *           properties:
+ *             crs:
+ *               type: object
+ *               description: The Coordinate Reference System (CRS) for the geolocation data.
+ *               properties:
+ *                 type:
+ *                   type: string
+ *                   description: Type of CRS; typically 'name' indicating a named CRS.
+ *                   example: "name"
+ *                 properties:
+ *                   type: object
+ *                   description: Properties of the CRS.
+ *                   properties:
+ *                     name:
+ *                       type: string
+ *                       description: Name of the CRS used.
+ *                       example: "EPSG:4326"
+ *             type:
+ *               type: string
+ *               description: The type of geoJSON object, typically a 'Point' for a single geographic location.
+ *               example: "Point"
+ *             coordinates:
+ *               type: array
+ *               description: Array of geographical coordinates (longitude, latitude).
+ *               items:
+ *                 type: number
+ *                 format: double
+ *               example: [-118.2437, 34.0522]
  *         creator:
- *           type: integer
- *           description: ID of the user who created the ticket
- *         created_at:
+ *           type: object
+ *           description: Information about the user who created the ticket.
+ *           properties:
+ *             userId:
+ *               type: integer
+ *               example: 1
+ *               description: ID of the user who created the ticket.
+ *             displayName:
+ *               type: string
+ *               example: "Alex"
+ *               description: Display name of the user who created the ticket.
+ *         createdAt:
  *           type: string
  *           format: date-time
  *           description: Timestamp when the ticket was created
- *   responses:
+ *         updator:
+ *           type: object
+ *           description: Information of the user who updated the ticket
+ *           properties:
+ *             userId:
+ *               type: integer
+ *               example: 1
+ *               description: ID of the user who updated the ticket.
+ *             displayName:
+ *               type: string
+ *               example: "Alex"
+ *               description: Display name of the user who updated the ticket.
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *           description: Timestamp when the ticket was updated
+ *         publisher:
+ *           type: object
+ *           description: Information of the user who published the ticket
+ *           properties:
+ *             userId:
+ *               type: integer
+ *               example: 1
+ *               description: ID of the user who published the ticket.
+ *             displayName:
+ *               type: string
+ *               example: "Bob"
+ *               description: Display name of the user who published the ticket.
+ *         publishedAt:
+ *           type: string
+ *           format: date-time
+ *           description: Timestamp when the ticket was published
+ *         closedAt:
+ *           type: string
+ *           format: date-time
+ *           description: Timestamp when the ticket was closed
+ *         closeReason:
+ *           type: string
+ *           description: Reason that the ticket was closed
+ * 
  *     UnauthorizedAccessInvalidTokenProvided:
  *       description: Access unauthorized due to invalid token
  *       content:
@@ -63,6 +160,7 @@ const { updateEventLog } = require('../../utils/logger');
  *               message:
  *                 type: string
  *                 example: "Invalid token provided."
+ * 
  *     ApiRateLimitExceeded:
  *       description: API rate limit has been exceeded
  *       content:
@@ -73,6 +171,7 @@ const { updateEventLog } = require('../../utils/logger');
  *               message:
  *                 type: string
  *                 example: "API rate limit exceeded."
+ * 
  *     ServerInternalError:
  *       description: Internal server error
  *       content:
@@ -112,30 +211,30 @@ const { updateEventLog } = require('../../utils/logger');
  *               body:
  *                 type: string
  *                 description: "Detailed description of the ticket"
- *               customer_id:
+ *               customerId:
  *                 type: integer
  *                 example: 1
  *                 description: "ID of the customer associated with this ticket"
- *               ticket_category_id:
+ *               ticketCategoryId:
  *                 type: integer
  *                 example: 3
  *                 description: "ID of the ticket category"
- *               is_confidential:
+ *               isConfidential:
  *                 type: boolean
  *                 example: false
  *                 description: "Indicates if the ticket is confidential"
- *               media_urls:
- *                 type: string
- *                 example: '["http://example.com/image1.jpg", "http://example.com/image2.jpg"]'
+ *               mediaUrls:
+ *                 type: array
+ *                 example: ["http://example.com/image1.jpg", "http://example.com/image2.jpg"]
  *                 description: "JSON array of media URLs associated with the ticket"
- *               geo_latitude:
+ *               geoLatitude:
  *                 type: number
  *                 format: float
  *                 example: 34.0522
  *                 minimum: -90
  *                 maximum: 90
  *                 description: "Latitude coordinate of the ticket's location"
- *               geo_longitude:
+ *               geoLongitude:
  *                 type: number
  *                 format: float
  *                 example: -118.2437
@@ -152,7 +251,7 @@ const { updateEventLog } = require('../../utils/logger');
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/TicketResponse'
+ *               $ref: '#/components/response/TicketResponse'
  *       400:
  *         description: Invalid request parameters.
  *         content:
@@ -222,22 +321,22 @@ router.post('/ticket', apiRequestLimiter,
       .isString()
       .withMessage('Body must be a string.'),
 
-    body('customer_id')
+    body('customerId')
       .optional()
       .isInt({ gt: 0 })
       .withMessage('Customer ID must be an integer greater than 0.'),
 
-    body('ticket_category_id')
+    body('ticketCategoryId')
       .optional()
       .isInt({ gt: 0 })
       .withMessage('Ticket category ID must be an integer greater than 0.'),
 
-    body('is_confidential')
+    body('isConfidential')
       .optional()
       .isBoolean()
       .withMessage('Is confidential must be a boolean.'),
 
-    body('media_urls')
+    body('mediaUrls')
       .optional()
       .custom((value) => {
         // This custom validator presumes you expect an array of URLs in JSON format
@@ -256,12 +355,12 @@ router.post('/ticket', apiRequestLimiter,
         return true;
       }),
 
-    body('geo_latitude')
+    body('geoLatitude')
       .optional()
       .isFloat({ min: -90, max: 90 })
       .withMessage('Latitude must be a float between -90 and 90.'),
 
-    body('geo_longitude')
+    body('geoLongitude')
       .optional()
       .isFloat({ min: -180, max: 180 })
       .withMessage('Longitude must be a float between -180 and 180.'),
@@ -271,21 +370,23 @@ router.post('/ticket', apiRequestLimiter,
       .isInt({ gt: 0 })
       .withMessage('Creator ID is required and must be an integer greater than 0.')
   ],
-  (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-    next();
+  checkRequestValidity,
+  async (req, res, next) => {
+    const {customerId} = req.body;
+    const isPrivateCustomer = await db.isPrivateCustomer(customerId);
+    const domain = isPrivateCustomer ? String(customerId) : '0';
+    const processedBody = toSnakeCase(req.body);
+    const middleware = authorizeUser({ dom: domain, obj: 'mra_tickets', act: 'C', attrs: { set: processedBody } });
+    middleware(req, res, next);
   },
   async (req, res) => {
     try {
-      const ticket = req.body;
+      const ticket = req.conditions.set;
       const createdTicket = await db.createTicket(ticket);
       if (!createdTicket) {
         throw new Error('Failed to create ticket.');
       }
-      return res.status(201).json(createdTicket);
+      return res.status(201).json(toLowerCamelCase(createdTicket));
     } catch (err) {
       updateEventLog(req, err);
 

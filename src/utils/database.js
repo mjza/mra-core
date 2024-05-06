@@ -260,30 +260,31 @@ async function getTickets(where) {
     }, {
       model: MraUsers,
       as: 'publisher_mra_user',
-      attributes: ['user_id', 'username'],
+      attributes: ['user_id', 'display_name'],
     }, {
       model: MraUsers,
       as: 'creator_mra_user',
-      attributes: ['user_id', 'username'],
+      attributes: ['user_id', 'display_name'],
     }, {
       model: MraUsers,
       as: 'updator_mra_user',
-      attributes: ['user_id', 'username'],
+      attributes: ['user_id', 'display_name'],
     }],
     attributes: [
-      'ticket_id', 'title', 'body', 'is_confidential',
-      'media_urls', 'publisher', 'published_at', 'closed_at', 'close_reason',
-      'geo_latitude', 'geo_longitude', 'geo_location', 'creator', 'created_at', 'updator', 'updated_at'
+      'ticket_id', 'title', 'body', 'is_confidential', 'media_urls',  
+      'geo_latitude', 'geo_longitude', 'geo_location',
+      'creator', 'created_at', 'updator', 'updated_at', 'publisher', 'published_at', 'closed_at', 'close_reason'
     ],
   });
 
   return tickets.map(ticket => ({
     ...ticket.get({ plain: true }),
-    publisher: ticket.publisher_mra_user,
-    creator: ticket.creator_mra_user,
-    updator: ticket.updator_mra_user,
-    // Remove the original keys if you don't need them in the output
+    publisher: ticket.publisher_mra_user ? ticket.publisher_mra_user.get({ plain: true }) : null,
+    creator: ticket.creator_mra_user ? ticket.creator_mra_user.get({ plain: true }) : null,
+    updator: ticket.updator_mra_user ? ticket.updator_mra_user.get({ plain: true }) : null,
+    // This map will ensure we remove the original model association keys
   })).map(({ publisher_mra_user, creator_mra_user, updator_mra_user, ...rest }) => rest);
+  
 }
 
 /**
@@ -332,6 +333,26 @@ async function deleteTicket(where) {
   return deletedRowCount > 0;
 }
 
+/**
+ * Checks if a customer is private based on the provided customer ID.
+ *
+ * @param {number} customerId - The ID of the customer.
+ * @returns {Promise<boolean>} A promise that resolves to true if the customer is private, false otherwise.
+ */
+const isPrivateCustomer = async (customerId) => {
+  if (!customerId) {
+    return false; // Returns false if no customerId is provided
+  }
+
+  const customer = await MraCustomers.findByPk(customerId, {
+    attributes: ['is_private'], // Optionally limit to only load the 'is_private' field
+  });
+
+  // Check if customer was found and return the 'is_private' status, otherwise false
+  return customer ? customer.is_private : false;
+};
+
+
 module.exports = {
   closeDBConnections,
   insertAuditLog,
@@ -347,5 +368,6 @@ module.exports = {
   getTickets,
   createTicket,
   updateTicket,
-  deleteTicket
+  deleteTicket,
+  isPrivateCustomer
 };

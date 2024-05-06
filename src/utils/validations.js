@@ -1,5 +1,6 @@
 const axios = require('axios');
 const { Agent } = require('https');
+const { validationResult } = require('express-validator');
 const { createEventLog, updateEventLog } = require('./logger');
 
 /**
@@ -102,4 +103,22 @@ const authorizeUser = (extraData) => async (req, res, next) => {
     }
 };
 
-module.exports = { testUrlAccessibility, isValidUrl, authorizeUser };
+/**
+ * Middleware to validate request data using validationResult.
+ * It checks if the request meets the validation criteria set by previous validation middlewares.
+ * If the validation fails, it sends a 400 status code with the validation errors.
+ * Otherwise, it passes control to the next middleware function in the stack.
+ *
+ * @param {object} req - The request object from Express.js containing the client's request data.
+ * @param {object} res - The response object from Express.js used to send back the desired HTTP response.
+ * @param {function} next - The callback function to pass control to the next middleware function.
+ */
+const checkRequestValidity = (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+    next();
+};
+
+module.exports = { testUrlAccessibility, isValidUrl, authorizeUser, checkRequestValidity };

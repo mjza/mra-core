@@ -1,6 +1,6 @@
 const express = require('express');
-const { body, query, param, validationResult } = require('express-validator');
-const { authorizeUser } = require('../../utils/validations');
+const { body, query, param } = require('express-validator');
+const { authorizeUser, checkRequestValidity } = require('../../utils/validations');
 const { toLowerCamelCase, toSnakeCase, encryptObjectItems, decryptObjectItems } = require('../../utils/converters');
 const db = require('../../utils/database');
 const { apiRequestLimiter } = require('../../utils/rateLimit');
@@ -186,11 +186,8 @@ router.get('/user_details', apiRequestLimiter,
       .isNumeric().withMessage('Limit must be a number')
       .toInt(),  
   ],
+  checkRequestValidity,
   (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
     const page = req.query.page || 1;
     const limit = req.query.limit || 30;
     req.pagination = {
@@ -401,13 +398,7 @@ router.post('/user_details', apiRequestLimiter,
       .withMessage('Public profile picture thumbnail URL must not exceed 255 characters.')
 
   ],
-  (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-    next();
-  },
+  checkRequestValidity,
   (req, res, next) => {
     const processedBody = toSnakeCase(req.body);
     const middleware = authorizeUser({ dom: '0', obj: 'mra_user_details', act: 'C', attrs: { set: processedBody } });
@@ -623,13 +614,7 @@ router.put('/user_details/:userId', apiRequestLimiter,
       .withMessage('Public profile picture thumbnail URL must not exceed 255 characters.')
 
   ],
-  (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-    next();
-  },
+  checkRequestValidity,
   (req, res, next) => {
     const processedBody = toSnakeCase(req.body);
     const middleware = authorizeUser({ dom: '0', obj: 'mra_user_details', act: 'U', attrs: { where: { user_id: parseInt(req.params.userId, 10) }, set: processedBody } });

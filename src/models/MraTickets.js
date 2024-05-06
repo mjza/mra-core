@@ -50,7 +50,7 @@ module.exports = function(sequelize, DataTypes) {
 				publisher: {
 						type: DataTypes.INTEGER,
 						allowNull: true,
-						comment: "References mra_users. Indicates the person who confirmed a public ticket.",
+						comment: "References mra_users. Indicates the person who reviewed and confirmed a public ticket.",
 						references: {
 								model: 'mra_users',
 								key: 'user_id'
@@ -86,10 +86,63 @@ module.exports = function(sequelize, DataTypes) {
 						allowNull: true,
 						comment: "Geospatial data point (PostGIS POINT type) representing the ticket's geographical location."
 				},
+				country_id: {
+						type: DataTypes.INTEGER,
+						allowNull: true,
+						comment: "The country that this ticket is related to.",
+						references: {
+								model: 'mrag_countries',
+								key: 'country_id'
+						}
+				},
+				city_id: {
+						type: DataTypes.INTEGER,
+						allowNull: true,
+						comment: "The city that this ticket is related to.",
+						references: {
+								model: 'mrag_cities',
+								key: 'city_id'
+						}
+				},
+				street: {
+						type: DataTypes.STRING(255),
+						allowNull: true,
+						comment: "The name of the street."
+				},
+				hause_number: {
+						type: DataTypes.STRING(30),
+						allowNull: true,
+						comment: "The house number."
+				},
+				unit: {
+						type: DataTypes.STRING(50),
+						allowNull: true,
+						comment: "Unit number or identifier for multi-unit buildings."
+				},
+				city_name: {
+						type: DataTypes.STRING(255),
+						allowNull: true,
+						comment: "Name of the city where the address is located."
+				},
+				region_name: {
+						type: DataTypes.STRING(255),
+						allowNull: true,
+						comment: "The region or state code where the address is situated."
+				},
+				postal_code: {
+						type: DataTypes.STRING(20),
+						allowNull: true,
+						comment: "The postal code associated with the address."
+				},
+				full_address: {
+						type: DataTypes.STRING(255),
+						allowNull: true,
+						comment: "The complete address in a standardized format.(full_addr in statcan.gc.ca)"
+				},
 				creator: {
 						type: DataTypes.INTEGER,
 						allowNull: false,
-						comment: "References mra_users. Indicates the reporter or the owner of the ticket.",
+						comment: "The user who has created this ticket.",
 						references: {
 								model: 'mra_users',
 								key: 'user_id'
@@ -99,11 +152,12 @@ module.exports = function(sequelize, DataTypes) {
 						type: DataTypes.DATE,
 						allowNull: false,
 						defaultValue: Sequelize.Sequelize.fn('now'),
-						comment: "Timestamp of when the ticket was submitted."
+						comment: "Timestamp of when this record was created."
 				},
 				updator: {
 						type: DataTypes.INTEGER,
 						allowNull: true,
+						comment: "References mra_users, indicating the user who last updated this record.",
 						references: {
 								model: 'mra_users',
 								key: 'user_id'
@@ -111,7 +165,8 @@ module.exports = function(sequelize, DataTypes) {
 				},
 				updated_at: {
 						type: DataTypes.DATE,
-						allowNull: true
+						allowNull: true,
+						comment: "Timestamp of the last update made to this record."
 				}
 		}, {
 				sequelize,

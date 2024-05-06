@@ -40,22 +40,22 @@ module.exports = function(sequelize, DataTypes) {
 				min_latitude: {
 						type: DataTypes.DECIMAL,
 						allowNull: true,
-						comment: "Minimum latitude value of the entityâ€™s boundary."
+						comment: "Minimum latitude value of the entity’s boundary."
 				},
 				min_longitude: {
 						type: DataTypes.DECIMAL,
 						allowNull: true,
-						comment: "Minimum longitude value of the entityâ€™s boundary."
+						comment: "Minimum longitude value of the entity’s boundary."
 				},
 				max_latitude: {
 						type: DataTypes.DECIMAL,
 						allowNull: true,
-						comment: "Maximum latitude value of the entityâ€™s boundary."
+						comment: "Maximum latitude value of the entity’s boundary."
 				},
 				max_longitude: {
 						type: DataTypes.DECIMAL,
 						allowNull: true,
-						comment: "Maximum longitude value of the entityâ€™s boundary."
+						comment: "Maximum longitude value of the entity’s boundary."
 				},
 				bounding_box: {
 						type: DataTypes.GEOMETRY('POLYGON', 4326),

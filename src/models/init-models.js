@@ -330,10 +330,14 @@ function initModels(sequelize) {
 		MragCities.hasMany(MraCustomers, { as: "mra_customers", foreignKey: "city_id"});
 		MraPosts.belongsTo(MragCities, { as: "city", foreignKey: "city_id"});
 		MragCities.hasMany(MraPosts, { as: "mra_posts", foreignKey: "city_id"});
+		MraTickets.belongsTo(MragCities, { as: "city", foreignKey: "city_id"});
+		MragCities.hasMany(MraTickets, { as: "mra_tickets", foreignKey: "city_id"});
 		MraUserCities.belongsTo(MragCities, { as: "city", foreignKey: "city_id"});
 		MragCities.hasMany(MraUserCities, { as: "mra_user_cities", foreignKey: "city_id"});
 		MraCustomers.belongsTo(MragCountries, { as: "country", foreignKey: "country_id"});
 		MragCountries.hasMany(MraCustomers, { as: "mra_customers", foreignKey: "country_id"});
+		MraTickets.belongsTo(MragCountries, { as: "country", foreignKey: "country_id"});
+		MragCountries.hasMany(MraTickets, { as: "mra_tickets", foreignKey: "country_id"});
 
 		return {
 				MraActions,
