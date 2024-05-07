@@ -1,4 +1,4 @@
-const { Sequelize, closeSequelize, MraUsers, MraAuditLogsCore, MraGenderTypes, MraUserDetails, MraTickets, MraCustomers, MraTicketCategories } = require('../models');
+const { Sequelize, closeSequelize, MraUsers, MraAuditLogsCore, MraGenderTypes, MraUserDetails, MraTickets, MraCustomers, MraTicketCategories, MragCountries, MragCities } = require('../models');
 
 /**
  * Closes the database connection pool.
@@ -249,30 +249,40 @@ const activateUser = async (user) => {
 async function getTickets(where) {
   const tickets = await MraTickets.findAll({
     where,
-    include: [{
-      model: MraCustomers,
-      as: 'customer',
-      attributes: ['customer_id', 'customer_name'],
-    }, {
-      model: MraTicketCategories,
-      as: 'ticket_category',
-      attributes: ['ticket_category_id', 'ticket_category_name'],
-    }, {
-      model: MraUsers,
-      as: 'publisher_mra_user',
-      attributes: ['user_id', 'display_name'],
-    }, {
-      model: MraUsers,
-      as: 'creator_mra_user',
-      attributes: ['user_id', 'display_name'],
-    }, {
-      model: MraUsers,
-      as: 'updator_mra_user',
-      attributes: ['user_id', 'display_name'],
-    }],
+    include: [
+      {
+        model: MragCountries,
+        as: 'country',
+        attributes: ['country_id', 'country_name'],
+      }, {
+        model: MragCities,
+        as: 'city',
+        attributes: ['city_id', 'city_name'],
+      }, {
+        model: MraCustomers,
+        as: 'customer',
+        attributes: ['customer_id', 'customer_name'],
+      }, {
+        model: MraTicketCategories,
+        as: 'ticket_category',
+        attributes: ['ticket_category_id', 'ticket_category_name'],
+      }, {
+        model: MraUsers,
+        as: 'publisher_mra_user',
+        attributes: ['user_id', 'display_name'],
+      }, {
+        model: MraUsers,
+        as: 'creator_mra_user',
+        attributes: ['user_id', 'display_name'],
+      }, {
+        model: MraUsers,
+        as: 'updator_mra_user',
+        attributes: ['user_id', 'display_name'],
+      }],
     attributes: [
-      'ticket_id', 'title', 'body', 'is_confidential', 'media_urls',  
-      'geo_latitude', 'geo_longitude', 'geo_location',
+      'ticket_id', 'title', 'body', 'is_confidential', 'media_urls',
+      'geo_latitude', 'geo_longitude', 'geo_location', 
+      'street', 'hause_number', 'unit', 'city_name', 'region_name', 'postal_code', 'full_address',
       'creator', 'created_at', 'updator', 'updated_at', 'publisher', 'published_at', 'closed_at', 'close_reason'
     ],
   });
@@ -284,7 +294,7 @@ async function getTickets(where) {
     updator: ticket.updator_mra_user ? ticket.updator_mra_user.get({ plain: true }) : null,
     // This map will ensure we remove the original model association keys
   })).map(({ publisher_mra_user, creator_mra_user, updator_mra_user, ...rest }) => rest);
-  
+
 }
 
 /**

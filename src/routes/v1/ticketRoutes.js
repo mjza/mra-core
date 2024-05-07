@@ -1,4 +1,4 @@
-const { body } = require('express-validator');
+const { body, oneOf } = require('express-validator');
 const { toLowerCamelCase, toSnakeCase } = require('../../utils/converters');
 const router = require('express').Router();
 const db = require('../../utils/database');
@@ -9,8 +9,89 @@ const { authorizeUser, checkRequestValidity } = require('../../utils/validations
 /**
  * @swagger
  * components:
+ *   request:
+ *     Ticket:
+ *       type: object
+ *       properties:
+ *         title:
+ *           type: string
+ *           maxLength: 255
+ *           example: "System Outage"
+ *           description: "Title of the ticket"
+ *         body:
+ *           type: string
+ *           description: "Detailed description of the ticket"
+ *         customerId:
+ *           type: integer
+ *           example: 1
+ *           description: "ID of the customer associated with this ticket"
+ *         ticketCategoryId:
+ *           type: integer
+ *           example: 3
+ *           description: "ID of the ticket category"
+ *         isConfidential:
+ *           type: boolean
+ *           example: false
+ *           description: "Indicates if the ticket is confidential"
+ *         mediaUrls:
+ *           type: array
+ *           example: ["http://example.com/image1.jpg", "http://example.com/image2.jpg"]
+ *           description: "JSON array of media URLs associated with the ticket"
+ *         geoLatitude:
+ *           type: number
+ *           format: float
+ *           example: 34.0522
+ *           minimum: -90
+ *           maximum: 90
+ *           description: "Latitude coordinate of the ticket's location"
+ *         geoLongitude:
+ *           type: number
+ *           format: float
+ *           example: -118.2437
+ *           minimum: -180
+ *           maximum: 180
+ *           description: "Longitude coordinate of the ticket's location"
+ *         countryId:
+ *           type: integer
+ *           example: 1
+ *           description: "The ID of the country, referencing mrag_countries"
+ *         cityId:
+ *           type: integer
+ *           example: null
+ *           description: "The ID of the city, referencing mrag_cities"
+ *         cityName:
+ *           type: string
+ *           maxLength: 255
+ *           example: "Calgary"
+ *           description: "Name of the city if cityId is not provided"
+ *         regionName:
+ *           type: string
+ *           maxLength: 255
+ *           example: "Alberta"
+ *           description: "Name of the region"
+ *         street:
+ *           type: string
+ *           maxLength: 255
+ *           example: "Main St"
+ *           description: "Street name of the address"
+ *         houseNumber:
+ *           type: string
+ *           maxLength: 30
+ *           example: "1234"
+ *           description: "House number in the street"
+ *         unit:
+ *           type: string
+ *           maxLength: 50
+ *           example: "Unit 5B"
+ *           description: "Unit number of the apartment or suite"
+ *         postalCode:
+ *           type: string
+ *           maxLength: 20
+ *           example: "T3A0Z8"
+ *           description: "Postal code of the address"
+ *
  *   response:
- *     TicketResponse:
+ *     Ticket:
  *       type: object
  *       properties:
  *         ticketId:
@@ -94,6 +175,48 @@ const { authorizeUser, checkRequestValidity } = require('../../utils/validations
  *                 type: number
  *                 format: double
  *               example: [-118.2437, 34.0522]
+ *         countryId:
+ *           type: integer
+ *           example: 1
+ *           description: "The ID of the country, referencing mrag_countries"
+ *         cityId:
+ *           type: integer
+ *           example: null
+ *           description: "The ID of the city, referencing mrag_cities"
+ *         cityName:
+ *           type: string
+ *           maxLength: 255
+ *           example: "Calgary"
+ *           description: "Name of the city if cityId is not provided"
+ *         regionName:
+ *           type: string
+ *           maxLength: 255
+ *           example: "AB"
+ *           description: "Name of the region/state"
+ *         street:
+ *           type: string
+ *           maxLength: 255
+ *           example: "Varsity Dr. NW"
+ *           description: "Street name of the address"
+ *         houseNumber:
+ *           type: string
+ *           maxLength: 30
+ *           example: "4515"
+ *           description: "House number in the street"
+ *         unit:
+ *           type: string
+ *           maxLength: 50
+ *           example: "5B"
+ *           description: "Unit number of the apartment or suite"
+ *         postalCode:
+ *           type: string
+ *           maxLength: 20
+ *           example: "T3A0Z8"
+ *           description: "Postal code of the address"
+ *         fullAddress:
+ *           type: string
+ *           example: "5B-4515 Varsity Dr. NW, Calgary T3A0Z8, AB, CA"
+ *           description: "Generated full address"
  *         creator:
  *           type: object
  *           description: Information about the user who created the ticket.
@@ -132,7 +255,7 @@ const { authorizeUser, checkRequestValidity } = require('../../utils/validations
  *           properties:
  *             userId:
  *               type: integer
- *               example: 1
+ *               example: 2
  *               description: ID of the user who published the ticket.
  *             displayName:
  *               type: string
@@ -148,6 +271,7 @@ const { authorizeUser, checkRequestValidity } = require('../../utils/validations
  *           description: Timestamp when the ticket was closed
  *         closeReason:
  *           type: string
+ *           example: "Done"
  *           description: Reason that the ticket was closed
  * 
  *     UnauthorizedAccessInvalidTokenProvided:
@@ -202,56 +326,23 @@ const { authorizeUser, checkRequestValidity } = require('../../utils/validations
  *             required:
  *               - title
  *               - creator
- *             properties:
- *               title:
- *                 type: string
- *                 maxLength: 255
- *                 example: "System Outage"
- *                 description: "Title of the ticket"
- *               body:
- *                 type: string
- *                 description: "Detailed description of the ticket"
- *               customerId:
- *                 type: integer
- *                 example: 1
- *                 description: "ID of the customer associated with this ticket"
- *               ticketCategoryId:
- *                 type: integer
- *                 example: 3
- *                 description: "ID of the ticket category"
- *               isConfidential:
- *                 type: boolean
- *                 example: false
- *                 description: "Indicates if the ticket is confidential"
- *               mediaUrls:
- *                 type: array
- *                 example: ["http://example.com/image1.jpg", "http://example.com/image2.jpg"]
- *                 description: "JSON array of media URLs associated with the ticket"
- *               geoLatitude:
- *                 type: number
- *                 format: float
- *                 example: 34.0522
- *                 minimum: -90
- *                 maximum: 90
- *                 description: "Latitude coordinate of the ticket's location"
- *               geoLongitude:
- *                 type: number
- *                 format: float
- *                 example: -118.2437
- *                 minimum: -180
- *                 maximum: 180
- *                 description: "Longitude coordinate of the ticket's location"
- *               creator:
- *                 type: integer
- *                 example: 1
- *                 description: "ID of the user who created the ticket"
+ *             allOf:
+ *               - $ref: '#/components/request/Ticket'
+ *               - type: object
+ *                 required:
+ *                   - creator
+ *                 properties:
+ *                   creator:
+ *                     type: integer
+ *                     example: 1
+ *                     description: "The ID of the user creating the ticket"
  *     responses:
  *       201:
  *         description: Ticket created successfully.
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/response/TicketResponse'
+ *               $ref: '#/components/response/Ticket'
  *       400:
  *         description: Invalid request parameters.
  *         content:
@@ -338,20 +429,15 @@ router.post('/ticket', apiRequestLimiter,
 
     body('mediaUrls')
       .optional()
-      .custom((value) => {
-        // This custom validator presumes you expect an array of URLs in JSON format
-        if (typeof value === 'string') {
-          try {
-            const urls = JSON.parse(value);
-            if (!Array.isArray(urls) || !urls.every(url => typeof url === 'string' && /^https?:\/\/.+/.test(url))) {
-              throw new Error('All URLs must be valid.');
-            }
-          } catch (err) {
-            throw new Error('Media URLs must be a valid JSON array of URLs.');
+      .isArray({ min: 1 }) // Ensure it's an array and not empty
+      .withMessage('Media URLs must be a non-empty array.')
+      .custom((urls) => {
+        // Check each URL in the array
+        urls.forEach(url => {
+          if (typeof url !== 'string' || !/^https?:\/\/.+/i.test(url)) {
+            throw new Error(`Invalid URL detected: ${url}`);
           }
-        } else {
-          throw new Error('Media URLs must be a stringified JSON.');
-        }
+        });
         return true;
       }),
 
@@ -368,11 +454,34 @@ router.post('/ticket', apiRequestLimiter,
     body('creator')
       .notEmpty()
       .isInt({ gt: 0 })
-      .withMessage('Creator ID is required and must be an integer greater than 0.')
+      .withMessage('Creator ID is required and must be an integer greater than 0.'),
+
+    oneOf([
+      [
+        body('cityId').isEmpty(),
+        body('cityName').isEmpty()
+      ],
+      [
+        body('cityId').exists().isInt({ gt: 0 }).withMessage('City ID must be an integer greater than 0'),
+        body('cityName').isEmpty()
+      ],
+      [
+        body('cityId').isEmpty(),
+        body('cityName').exists().isString().withMessage('City name must be a string')
+      ]
+    ], 'Either cityId or cityName must be provided, but not both, or both can be null.'),
+
+    body('ticketId')
+    .not().exists()
+    .withMessage('ticketId should not be provided in the request.'),
+
+    body('fullAddress')
+    .not().exists()
+    .withMessage('fullAddress should not be provided in the request.'),
   ],
   checkRequestValidity,
   async (req, res, next) => {
-    const {customerId} = req.body;
+    const { customerId } = req.body;
     const isPrivateCustomer = await db.isPrivateCustomer(customerId);
     const domain = isPrivateCustomer ? String(customerId) : '0';
     const processedBody = toSnakeCase(req.body);
