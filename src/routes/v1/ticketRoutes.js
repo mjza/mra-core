@@ -1,4 +1,4 @@
-const { body, oneOf } = require('express-validator');
+const { query, body, oneOf } = require('express-validator');
 const { toLowerCamelCase, toSnakeCase } = require('../../utils/converters');
 const router = require('express').Router();
 const db = require('../../utils/database');
@@ -310,7 +310,7 @@ const { authorizeUser, checkRequestValidity } = require('../../utils/validations
 
 /**
  * @swagger
- * /v1/ticket:
+ * /v1/tickets:
  *   post:
  *     summary: Create a new ticket
  *     description: Allows for the creation of a new ticket, associating it with user details and other metadata.
@@ -397,40 +397,34 @@ const { authorizeUser, checkRequestValidity } = require('../../utils/validations
  *       500:
  *         $ref: '#/components/responses/ServerInternalError'
  */
-router.post('/ticket', apiRequestLimiter,
+router.post('/tickets', apiRequestLimiter,
   [
-    body('title')
+    body('title', 'Title must not exceed 255 characters.')
       .notEmpty()
       .withMessage('Title is required.')
       .isString()
       .withMessage('Title must be a string.')
-      .isLength({ max: 255 })
-      .withMessage('Title must not exceed 255 characters.'),
+      .isLength({ max: 255 }),
 
-    body('body')
+    body('body', 'Body must be a string.')
       .optional()
-      .isString()
-      .withMessage('Body must be a string.'),
+      .isString(),
 
-    body('customerId')
+    body('customerId', 'Customer ID must be an integer greater than 0.')
       .optional()
-      .isInt({ gt: 0 })
-      .withMessage('Customer ID must be an integer greater than 0.'),
+      .isInt({ gt: 0 }),
 
-    body('ticketCategoryId')
+    body('ticketCategoryId', 'Ticket category ID must be an integer greater than 0.')
       .optional()
-      .isInt({ gt: 0 })
-      .withMessage('Ticket category ID must be an integer greater than 0.'),
+      .isInt({ gt: 0 }),
 
-    body('isConfidential')
+    body('isConfidential', 'Is confidential must be a boolean.')
       .optional()
-      .isBoolean()
-      .withMessage('Is confidential must be a boolean.'),
+      .isBoolean(),
 
-    body('mediaUrls')
+    body('mediaUrls', 'Media URLs must be a non-empty array.')
       .optional()
       .isArray({ min: 1 }) // Ensure it's an array and not empty
-      .withMessage('Media URLs must be a non-empty array.')
       .custom((urls) => {
         // Check each URL in the array
         urls.forEach(url => {
@@ -441,20 +435,17 @@ router.post('/ticket', apiRequestLimiter,
         return true;
       }),
 
-    body('geoLatitude')
+    body('geoLatitude', 'Latitude must be a float between -90 and 90.')
       .optional()
-      .isFloat({ min: -90, max: 90 })
-      .withMessage('Latitude must be a float between -90 and 90.'),
+      .isFloat({ min: -90, max: 90 }),
 
-    body('geoLongitude')
+    body('geoLongitude', 'Longitude must be a float between -180 and 180.')
       .optional()
-      .isFloat({ min: -180, max: 180 })
-      .withMessage('Longitude must be a float between -180 and 180.'),
+      .isFloat({ min: -180, max: 180 }),
 
-    body('creator')
+    body('creator', 'Creator ID is required and must be an integer greater than 0.')
       .notEmpty()
-      .isInt({ gt: 0 })
-      .withMessage('Creator ID is required and must be an integer greater than 0.'),
+      .isInt({ gt: 0 }),
 
     oneOf([
       [
@@ -462,22 +453,17 @@ router.post('/ticket', apiRequestLimiter,
         body('cityName').isEmpty()
       ],
       [
-        body('cityId').exists().isInt({ gt: 0 }).withMessage('City ID must be an integer greater than 0'),
+        body('cityId', 'City ID must be an integer greater than 0').exists().isInt({ gt: 0 }),
         body('cityName').isEmpty()
       ],
       [
         body('cityId').isEmpty(),
-        body('cityName').exists().isString().withMessage('City name must be a string')
+        body('cityName', 'City name must be a string').exists().isString()
       ]
     ], 'Either cityId or cityName must be provided, but not both, or both can be null.'),
 
-    body('ticketId')
-    .not().exists()
-    .withMessage('ticketId should not be provided in the request.'),
-
-    body('fullAddress')
-    .not().exists()
-    .withMessage('fullAddress should not be provided in the request.'),
+    body('ticketId', 'ticketId should not be provided in the request.').not().exists(),
+    body('fullAddress', 'fullAddress should not be provided in the request.').not().exists(),
   ],
   checkRequestValidity,
   async (req, res, next) => {
@@ -506,6 +492,279 @@ router.post('/ticket', apiRequestLimiter,
       if (errorCode === '23503') {
         return res.status(422).json({ message: 'Invalid foreign key value.', details: err.message });
       }
+      return res.status(500).json({ message: err.message });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /v1/tickets:
+ *   get:
+ *     summary: Retrieve a list of tickets
+ *     description: Fetches a list of tickets based on various filters and pagination. It supports searching across multiple fields and date ranges.
+ *     tags: [2nd]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number for pagination.
+ *       - in: query
+ *         name: limit
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           default: 30
+ *         description: Number of tickets to return per page.
+ *       - in: query
+ *         name: ticketId
+ *         required: false
+ *         schema:
+ *           type: integer
+ *         description: Filter by specific ticket ID.
+ *       - in: query
+ *         name: customerId
+ *         required: false
+ *         schema:
+ *           type: integer
+ *         description: Filter tickets by customer ID.
+ *       - in: query
+ *         name: ticketCategoryId
+ *         required: false
+ *         schema:
+ *           type: integer
+ *         description: Filter tickets by ticket category ID.
+ *       - in: query
+ *         name: cityId
+ *         required: false
+ *         schema:
+ *           type: integer
+ *         description: Filter tickets by city ID.
+ *       - in: query
+ *         name: countryId
+ *         required: false
+ *         schema:
+ *           type: integer
+ *         description: Filter tickets by country ID.
+ *       - in: query
+ *         name: creator
+ *         required: false
+ *         schema:
+ *           type: integer
+ *         description: Filter tickets by creator's user ID.
+ *       - in: query
+ *         name: updator
+ *         required: false
+ *         schema:
+ *           type: integer
+ *         description: Filter tickets by updator's user ID.
+ *       - in: query
+ *         name: publisher
+ *         required: false
+ *         schema:
+ *           type: integer
+ *         description: Filter tickets by publisher's user ID.
+ *       - in: query
+ *         name: createdAtAfter
+ *         required: false
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Filter tickets created after this date.
+ *       - in: query
+ *         name: createdAtBefore
+ *         required: false
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Filter tickets created before this date.
+ *       - in: query
+ *         name: updatedAtAfter
+ *         required: false
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Filter tickets updated after this date.
+ *       - in: query
+ *         name: updatedAtBefore
+ *         required: false
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Filter tickets updated before this date.
+ *       - in: query
+ *         name: publishedAtAfter
+ *         required: false
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Filter tickets published after this date.
+ *       - in: query
+ *         name: publishedAtBefore
+ *         required: false
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Filter tickets published before this date.
+ *       - in: query
+ *         name: closedAtAfter
+ *         required: false
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Filter tickets closed after this date.
+ *       - in: query
+ *         name: closedAtBefore
+ *         required: false
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Filter tickets closed before this date.
+ *       - in: query
+ *         name: isConfidential
+ *         required: false
+ *         schema:
+ *           type: boolean
+ *         description: Filter tickets by confidentiality.
+ *       - in: query
+ *         name: search
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: Search term to apply across specified search fields.
+ *       - in: query
+ *         name: searchFields
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: Comma-separated fields to apply the search term to, such as title, body, street, etc.
+ *     responses:
+ *       200:
+ *         description: A list of tickets.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/response/Ticket'
+ *                 hasMore:
+ *                   type: boolean
+ *                   description: Indicates if more data is available beyond the current page.
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedAccessInvalidTokenProvided'
+ *       429:
+ *         $ref: '#/components/responses/ApiRateLimitExceeded'
+ *       500:
+ *         $ref: '#/components/responses/ServerInternalError'
+ */
+
+
+router.get('/tickets', apiRequestLimiter,
+  [
+    query('page', 'Page must be a number').optional({ checkFalsy: true }).isNumeric().toInt(),
+    query('limit', 'Limit must be a number').optional({ checkFalsy: true }).isNumeric().toInt(),
+
+    query('ticketId', 'TicketId must be a number.').optional({ checkFalsy: true }).isNumeric().toInt(),
+    query('customerId', 'CustomerId must be a number.').optional({ checkFalsy: true }).isNumeric().toInt(),
+    query('ticketCategoryId', 'TicketCategoryId must be a number.').optional({ checkFalsy: true }).isNumeric().toInt(),
+    query('cityId', 'CityId must be a number.').optional({ checkFalsy: true }).isNumeric().toInt(),
+    query('countryId', 'CountryId must be a number.').optional({ checkFalsy: true }).isNumeric().toInt(),
+    query('creator', 'Creator must be a number.').optional({ checkFalsy: true }).isNumeric().toInt(),
+    query('updator', 'Updator must be a number.').optional({ checkFalsy: true }).isNumeric().toInt(),
+    query('publisher', 'Publisher must be a number.').optional({ checkFalsy: true }).isNumeric().toInt(),
+
+    query('createdAtAfter', 'CreatedAtAfter must be a date in YYYY-MM-DD format').optional({ checkFalsy: true }).isISO8601(),
+    query('createdAtBefore', 'CreatedAtBefore must be a date in YYYY-MM-DD format').optional({ checkFalsy: true }).isISO8601(),
+    query('updatedAtAfter', 'UpdatedAtAfter must be a date in YYYY-MM-DD format').optional({ checkFalsy: true }).isISO8601(),
+    query('updatedAtBefore', 'UpdatedAtBefore must be a date in YYYY-MM-DD format').optional({ checkFalsy: true }).isISO8601(),
+    query('publishedAtAfter', 'PublishedAtAfter must be a date in YYYY-MM-DD format').optional({ checkFalsy: true }).isISO8601(),
+    query('publishedAtBefore', 'PublishedAtBefore must be a date in YYYY-MM-DD format').optional({ checkFalsy: true }).isISO8601(),
+    query('closedAtAfter', 'ClosedAtAfter must be a date in YYYY-MM-DD format').optional({ checkFalsy: true }).isISO8601(),
+    query('closedAtBefore', 'ClosedAtBefore must be a date in YYYY-MM-DD format').optional({ checkFalsy: true }).isISO8601(),
+
+    query('isConfidential', 'IsConfidential must be either true or false').optional({ checkFalsy: true }).isBoolean().toBoolean(),
+
+    query('search', 'Search must be a non-empty string.').optional({ checkFalsy: true }).isString(),
+    query('searchFields', 'SearchFields must be a valid comma-separated list of fields [title, body, street, houseNumber, unit, cityName, regionName, postalCode, fullAddress, closeReason]')
+      .optional({ checkFalsy: true })
+      .custom((value) => {
+        const allowedFields = ['title', 'body', 'street', 'houseNumber', 'unit', 'cityName', 'regionName', 'postalCode', 'fullAddress', 'closeReason'];
+        const fields = value.split(',').map(field => field.trim());
+        return fields.every(field => allowedFields.includes(field));
+      }),
+  ],
+  checkRequestValidity,
+  (req, res, next) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 30;
+    req.pagination = {
+      limit: limit + 1,
+      offset: (page - 1) * limit
+    };
+
+    // example: ?order=createdAt,DESC;title,ASC
+    const order = req.query.order
+      ? req.query.order.split(';').map(pair => {
+        const [field, direction] = pair.split(',');
+        return [toSnakeCase(field), direction];
+      })
+      : [['created_at', 'DESC']];
+
+    req.order = order;
+
+    next();
+  },
+  async (req, res, next) => {
+    let where = {};
+
+    const search = req.query.search;
+    const searchFields = req.query.searchFields ? req.query.searchFields.split(',') : ['title', 'body', 'street', 'houseNumber', 'unit', 'cityName', 'regionName', 'postalCode', 'fullAddress', 'closeReason'];
+    if (search && searchFields.length) {
+      where = {
+        ['Sequelize.Op.or']: searchFields.map(field => ({
+          [toSnakeCase(field)]: { ['Sequelize.Op.iLike']: `%${search}%` }
+        }))
+      };
+    }
+
+    const isConfidential = req.query.isConfidential;
+    if (isConfidential) {
+      where['is_confidential'] = isConfidential === true;
+    }
+
+    const filters = ['ticketId', 'ticketCategoryId', 'customerId', 'cityId', 'countryId', 'creator', 'updator', 'publisher'];
+    filters.forEach(filter => {
+      if (req.query[filter]) {
+        where[toSnakeCase(filter)] = parseInt(req.query[filter], 10);
+      }
+    });
+
+    const dateFields = ['createdAt', 'updatedAt', 'publishedAt', 'closedAt'];
+    dateFields.forEach(field => db.addDateRangeFilter(where, req.query, field));
+
+    const customerId = req.query.customerId;
+    const isPrivateCustomer = await db.isPrivateCustomer(customerId);
+    const domain = isPrivateCustomer ? String(customerId) : '0';
+    const middleware = authorizeUser({ dom: domain, obj: 'mra_tickets', act: 'R', attrs: { where } });
+    middleware(req, res, next);
+  },
+  async (req, res) => {
+    try {
+      const ticketsArray = await db.getTickets(req.conditions.where, req.pagination, req.order);
+
+      // Determine if there are more items beyond the current page
+      const hasMore = ticketsArray.length > (req.pagination.limit - 1);
+      const results = hasMore ? ticketsArray.slice(0, -1) : ticketsArray; // Remove the extra item if present
+
+      res.json({ hasMore, data: results.map(ticket => toLowerCamelCase(ticket)) });
+    } catch (err) {
+      updateEventLog(req, err);
       return res.status(500).json({ message: err.message });
     }
   }

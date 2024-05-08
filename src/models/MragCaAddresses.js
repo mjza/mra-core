@@ -52,12 +52,12 @@ module.exports = function(sequelize, DataTypes) {
 						allowNull: true,
 						comment: "The street number associated with the address.(street_no in statcan.gc.ca)"
 				},
-				hause_number: {
+				house_number: {
 						type: DataTypes.INTEGER,
 						allowNull: true,
 						comment: "Numeric part of the house number, extracted from street_no."
 				},
-				hause_alpha: {
+				house_alpha: {
 						type: DataTypes.STRING(30),
 						allowNull: true,
 						comment: "Alphabetic part of the house number, if present, extracted from street_no."

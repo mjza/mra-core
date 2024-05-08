@@ -109,7 +109,7 @@ module.exports = function(sequelize, DataTypes) {
 						allowNull: true,
 						comment: "The name of the street."
 				},
-				hause_number: {
+				house_number: {
 						type: DataTypes.STRING(30),
 						allowNull: true,
 						comment: "The house number."

@@ -1,11 +1,123 @@
 const { Sequelize, closeSequelize, MraUsers, MraAuditLogsCore, MraGenderTypes, MraUserDetails, MraTickets, MraCustomers, MraTicketCategories, MragCountries, MragCities } = require('../models');
-
+const { Op } = Sequelize;
 /**
  * Closes the database connection pool.
  */
 const closeDBConnections = async () => {
   await closeSequelize();
 };
+
+/**
+ * Adds date range filters to the Sequelize query `where` clause based on the specified field.
+ * This function handles both the start and end of the date range by checking for specific
+ * suffixes ('After' and 'Before') appended to the field name in the query parameters.
+ *
+ * @param {Object} where - The existing Sequelize `where` clause object which the function modifies.
+ * @param {Object} query - The request query object containing potential date range parameters.
+ * @param {string} field - The base name of the date field to which the date range filters will apply.
+ *                         The function expects to find query parameters with names formed by appending
+ *                         'After' and 'Before' to this base field name (e.g., 'createdAtAfter' for 'createdAt').
+ */
+const addDateRangeFilter = (where, query, field) => {
+  const fieldAfter = `${field}After`;
+  const fieldBefore = `${field}Before`;
+
+  if (query[fieldAfter] || query[fieldBefore]) {
+      where[field] = {};
+      if (query[fieldAfter]) {
+          where[field][Sequelize.Op.gte] = new Date(query[fieldAfter]);
+      }
+      if (query[fieldBefore]) {
+          where[field][Sequelize.Op.lte] = new Date(query[fieldBefore]);
+      }
+  }
+};
+
+/**
+ * Converts string representations of Sequelize operator keys to their respective Sequelize symbol operators.
+ * This function is particularly useful when operators are stored or transmitted as strings (e.g., in JSON format)
+ * and need to be converted back to symbols for query processing in Sequelize.
+ *
+ * The function handles nested objects and arrays recursively, ensuring all operator strings are converted throughout
+ * the entire structure of the input `where` clause object.
+ *
+ * @param {Object|Array} where - The `where` clause object or array containing potential string representations
+ *                               of Sequelize operators. If an array or non-operator object key is encountered,
+ *                               it recurses into that structure to convert nested operators.
+ * @returns {Object|Array} The `where` clause object or array with all operator strings converted to Sequelize symbols.
+ *                         Structure and data types other than operator strings are preserved as is.
+ *
+ * @example
+ * // Usage example:
+ * const whereClause = {
+ *   'Sequelize.Op.or': [
+ *     { 'Sequelize.Op.like': '%value%' },
+ *     { 'Sequelize.Op.gte': 10 }
+ *   ],
+ *   'someField': 'someValue'
+ * };
+ *
+ * const convertedWhereClause = convertSequelizeOperators(whereClause);
+ * // convertedWhereClause now contains:
+ * // {
+ * //   [Sequelize.Op.or]: [
+ * //     { [Sequelize.Op.like]: '%value%' },
+ * //     { [Sequelize.Op.gte]: 10 }
+ * //   ],
+ * //   'someField': 'someValue'
+ * // }
+ * // which is suitable for use in Sequelize queries.
+ */
+const convertSequelizeOperators = (where) => {
+  const opMap = {
+    'Sequelize.Op.or': Op.or,
+    'Sequelize.Op.and': Op.and,
+    'Sequelize.Op.gt': Op.gt,
+    'Sequelize.Op.gte': Op.gte,
+    'Sequelize.Op.lt': Op.lt,
+    'Sequelize.Op.lte': Op.lte,
+    'Sequelize.Op.ne': Op.ne,
+    'Sequelize.Op.eq': Op.eq,
+    'Sequelize.Op.not': Op.not,
+    'Sequelize.Op.between': Op.between,
+    'Sequelize.Op.notBetween': Op.notBetween,
+    'Sequelize.Op.in': Op.in,
+    'Sequelize.Op.notIn': Op.notIn,
+    'Sequelize.Op.like': Op.like,
+    'Sequelize.Op.notLike': Op.notLike,
+    'Sequelize.Op.iLike': Op.iLike, // Specific to PostgreSQL
+    'Sequelize.Op.notILike': Op.notILike, // Specific to PostgreSQL
+    'Sequelize.Op.startsWith': Op.startsWith,
+    'Sequelize.Op.endsWith': Op.endsWith,
+    'Sequelize.Op.substring': Op.substring,
+    'Sequelize.Op.overlap': Op.overlap, // Specific to PostgreSQL arrays
+    'Sequelize.Op.contains': Op.contains,
+    'Sequelize.Op.contained': Op.contained,
+    'Sequelize.Op.any': Op.any,
+    'Sequelize.Op.regexp': Op.regexp, // Specific to MySQL and PostgreSQL
+    'Sequelize.Op.iRegexp': Op.iRegexp, // Specific to PostgreSQL
+    'Sequelize.Op.like': Op.like,
+    'Sequelize.Op.notLike': Op.notLike,
+  };
+
+  const translate = (obj) => {
+    if (typeof obj !== 'object' || obj === null) {
+      return obj;
+    }
+
+    if (obj instanceof Array) {
+      return obj.map(translate);
+    }
+
+    return Object.entries(obj).reduce((acc, [key, value]) => {
+      const newKey = opMap[key] || key;
+      acc[newKey] = translate(value);
+      return acc;
+    }, {});
+  };
+
+  return translate(where);
+}
 
 /**
  * Inserts a new audit log into the database.
@@ -82,14 +194,14 @@ const deleteAuditLog = async (logId) => {
  * @returns {Object[]} An array of user details objects. Each object contains details such as
  *                     user_id, first_name, middle_name, last_name, gender_id, date_of_birth,
  *                     profile_picture_url, profile_picture_thumbnail_url, creator, created_at,
- *                     updator, and updated_at. The length of the array is `limit + 1` if more items
+ *                     updator, and updated_at. Caller must pass `limit + 1` so if more items
  *                     are available, allowing the caller to determine if additional pages exist.
  */
 async function getUserDetails(where, pagination) {
   const { limit, offset } = pagination;
   const userDetails = await MraUserDetails.findAll({
     where,
-    limit: limit + 1,
+    limit,
     offset,
     include: [{
       model: MraGenderTypes,
@@ -112,7 +224,7 @@ async function createUserDetails(userDetails) {
   const createdRow = await MraUserDetails.create(userDetails);
 
   if (createdRow && createdRow.user_id) {
-    const userDetails = await getUserDetails({ user_id: createdRow.user_id }, { limit: 0, offset: 0 });
+    const userDetails = await getUserDetails({ user_id: createdRow.user_id }, { limit: 1, offset: 0 });
     return userDetails && userDetails[0];
   } else {
     return null;
@@ -130,7 +242,7 @@ async function updateUserDetails(where, userDetails) {
   const [affectedRowCount] = await MraUserDetails.update(userDetails, { where });
 
   if (affectedRowCount > 0) {
-    const userDetails = await getUserDetails(where, { limit: 0, offset: 0 });
+    const userDetails = await getUserDetails(where, { limit: 1, offset: 0 });
     return userDetails && userDetails[0];
   } else {
     return null;
@@ -246,9 +358,13 @@ const activateUser = async (user) => {
  * @param {object} where - The object containing `where` clauses to specify the search criteria.
  * @returns {Object[]} An array of ticket objects.
  */
-async function getTickets(where) {
+async function getTickets(where, pagination, order = [['created_at', 'DESC']]) {
+  const { limit, offset } = pagination;
+
   const tickets = await MraTickets.findAll({
-    where,
+    where: convertSequelizeOperators(where),
+    offset,
+    limit,
     include: [
       {
         model: MragCountries,
@@ -281,10 +397,11 @@ async function getTickets(where) {
       }],
     attributes: [
       'ticket_id', 'title', 'body', 'is_confidential', 'media_urls',
-      'geo_latitude', 'geo_longitude', 'geo_location', 
-      'street', 'hause_number', 'unit', 'city_name', 'region_name', 'postal_code', 'full_address',
+      'geo_latitude', 'geo_longitude', 'geo_location',
+      'street', 'house_number', 'unit', 'city_name', 'region_name', 'postal_code', 'full_address',
       'creator', 'created_at', 'updator', 'updated_at', 'publisher', 'published_at', 'closed_at', 'close_reason'
     ],
+    order
   });
 
   return tickets.map(ticket => ({
@@ -307,7 +424,7 @@ async function createTicket(ticket) {
   const createdTicket = await MraTickets.create(ticket);
 
   if (createdTicket && createdTicket.ticket_id) {
-    const tickets = await getTickets({ ticket_id: createdTicket.ticket_id });
+    const tickets = await getTickets({ ticket_id: createdTicket.ticket_id }, { limit: 1, offset: 0 });
     return tickets[0];
   } else {
     return null;
@@ -325,7 +442,7 @@ async function updateTicket(where, ticket) {
   const [affectedRowCount] = await MraTickets.update(ticket, { where });
 
   if (affectedRowCount > 0) {
-    const updatedTickets = await getTickets(where);
+    const updatedTickets = await getTickets(where, { limit: 1, offset: 0 });
     return updatedTickets[0];
   } else {
     return null;
@@ -365,6 +482,8 @@ const isPrivateCustomer = async (customerId) => {
 
 module.exports = {
   closeDBConnections,
+  addDateRangeFilter,
+  convertSequelizeOperators,
   insertAuditLog,
   updateAuditLog,
   deleteAuditLog,
@@ -379,5 +498,6 @@ module.exports = {
   createTicket,
   updateTicket,
   deleteTicket,
-  isPrivateCustomer
+  isPrivateCustomer,
+  
 };

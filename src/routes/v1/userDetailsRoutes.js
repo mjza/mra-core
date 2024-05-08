@@ -184,14 +184,14 @@ router.get('/user_details', apiRequestLimiter,
     query('limit')
       .optional({ checkFalsy: true })
       .isNumeric().withMessage('Limit must be a number')
-      .toInt(),  
+      .toInt(),
   ],
   checkRequestValidity,
   (req, res, next) => {
     const page = req.query.page || 1;
     const limit = req.query.limit || 30;
     req.pagination = {
-      limit,
+      limit: limit + 1,
       offset: (page - 1) * limit
     };
     next();
@@ -210,7 +210,7 @@ router.get('/user_details', apiRequestLimiter,
       }
 
       // Determine if there are more items beyond the current page
-      const hasMore = userDetailsArray.length > req.pagination.limit;
+      const hasMore = userDetailsArray.length > (req.pagination.limit - 1);
       const results = hasMore ? userDetailsArray.slice(0, -1) : userDetailsArray; // Remove the extra item if present
 
       const decryptedDataArray = results.map(userDetails =>
@@ -222,7 +222,8 @@ router.get('/user_details', apiRequestLimiter,
       updateEventLog(req, err);
       return res.status(500).json({ message: err.message });
     }
-  });
+  }
+);
 
 /**
  * @swagger

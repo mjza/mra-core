@@ -171,6 +171,11 @@ const toLowerCamelCase = (obj) => {
 const toSnakeCase = (obj) => {
     const convertKey = (key) => key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
 
+    // Directly return the converted string if the input is a string
+    if (typeof obj === 'string') {
+        return convertKey(obj);
+    }
+
     const processValue = (value) => {
         // Check if the value is a date object
         if (value instanceof Date) {
