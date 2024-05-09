@@ -1,4 +1,4 @@
-const { query, body, oneOf } = require('express-validator');
+const { query, body, oneOf, param } = require('express-validator');
 const { toLowerCamelCase, toSnakeCase } = require('../../utils/converters');
 const router = require('express').Router();
 const db = require('../../utils/database');
@@ -308,194 +308,6 @@ const { authorizeUser, checkRequestValidity } = require('../../utils/validations
  *                 example: "An unexpected error occurred."
  */
 
-/**
- * @swagger
- * /v1/tickets:
- *   post:
- *     summary: Create a new ticket
- *     description: Allows for the creation of a new ticket, associating it with user details and other metadata.
- *     tags: [2nd]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - title
- *               - creator
- *             allOf:
- *               - $ref: '#/components/request/Ticket'
- *               - type: object
- *                 required:
- *                   - creator
- *                 properties:
- *                   creator:
- *                     type: integer
- *                     example: 1
- *                     description: "The ID of the user creating the ticket"
- *     responses:
- *       201:
- *         description: Ticket created successfully.
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/response/Ticket'
- *       400:
- *         description: Invalid request parameters.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 errors:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       msg:
- *                         type: string
- *                         example: "Title must not exceed 255 characters."
- *                       param:
- *                         type: string
- *                         example: "title"
- *                       location:
- *                         type: string
- *                         example: "body"
- *       401:
- *         $ref: '#/components/responses/UnauthorizedAccessInvalidTokenProvided'
- *       403:
- *         description: Unauthorized access - Update other users!
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "User is not authorized to create tickets."
- *       422:
- *         description: |
- *           Unprocessable Content. This can occur in different scenarios:
- *           - Duplicate record: Duplicate ticket detected.
- *           - Foreign key violation: Invalid foreign key value.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Duplicate ticket detected."
- *                 details:
- *                   type: string
- *                   example: "duplicate key value violates unique constraint 'mra_tickets_pkey'"
- *       429:
- *         $ref: '#/components/responses/ApiRateLimitExceeded'
- *       500:
- *         $ref: '#/components/responses/ServerInternalError'
- */
-router.post('/tickets', apiRequestLimiter,
-  [
-    body('title', 'Title must not exceed 255 characters.')
-      .notEmpty()
-      .withMessage('Title is required.')
-      .isString()
-      .withMessage('Title must be a string.')
-      .isLength({ max: 255 }),
-
-    body('body', 'Body must be a string.')
-      .optional()
-      .isString(),
-
-    body('customerId', 'Customer ID must be an integer greater than 0.')
-      .optional()
-      .isInt({ gt: 0 }),
-
-    body('ticketCategoryId', 'Ticket category ID must be an integer greater than 0.')
-      .optional()
-      .isInt({ gt: 0 }),
-
-    body('isConfidential', 'Is confidential must be a boolean.')
-      .optional()
-      .isBoolean(),
-
-    body('mediaUrls', 'Media URLs must be a non-empty array.')
-      .optional()
-      .isArray({ min: 1 }) // Ensure it's an array and not empty
-      .custom((urls) => {
-        // Check each URL in the array
-        urls.forEach(url => {
-          if (typeof url !== 'string' || !/^https?:\/\/.+/i.test(url)) {
-            throw new Error(`Invalid URL detected: ${url}`);
-          }
-        });
-        return true;
-      }),
-
-    body('geoLatitude', 'Latitude must be a float between -90 and 90.')
-      .optional()
-      .isFloat({ min: -90, max: 90 }),
-
-    body('geoLongitude', 'Longitude must be a float between -180 and 180.')
-      .optional()
-      .isFloat({ min: -180, max: 180 }),
-
-    body('creator', 'Creator ID is required and must be an integer greater than 0.')
-      .notEmpty()
-      .isInt({ gt: 0 }),
-
-    oneOf([
-      [
-        body('cityId').isEmpty(),
-        body('cityName').isEmpty()
-      ],
-      [
-        body('cityId', 'City ID must be an integer greater than 0').exists().isInt({ gt: 0 }),
-        body('cityName').isEmpty()
-      ],
-      [
-        body('cityId').isEmpty(),
-        body('cityName', 'City name must be a string').exists().isString()
-      ]
-    ], 'Either cityId or cityName must be provided, but not both, or both can be null.'),
-
-    body('ticketId', 'ticketId should not be provided in the request.').not().exists(),
-    body('fullAddress', 'fullAddress should not be provided in the request.').not().exists(),
-  ],
-  checkRequestValidity,
-  async (req, res, next) => {
-    const { customerId } = req.body;
-    const isPrivateCustomer = await db.isPrivateCustomer(customerId);
-    const domain = isPrivateCustomer ? String(customerId) : '0';
-    const processedBody = toSnakeCase(req.body);
-    const middleware = authorizeUser({ dom: domain, obj: 'mra_tickets', act: 'C', attrs: { set: processedBody } });
-    middleware(req, res, next);
-  },
-  async (req, res) => {
-    try {
-      const ticket = req.conditions.set;
-      const createdTicket = await db.createTicket(ticket);
-      if (!createdTicket) {
-        throw new Error('Failed to create ticket.');
-      }
-      return res.status(201).json(toLowerCamelCase(createdTicket));
-    } catch (err) {
-      updateEventLog(req, err);
-
-      const errorCode = err.original?.code;
-      if (errorCode === '23505') {
-        return res.status(422).json({ message: 'Duplicate ticket detected.', details: err.message });
-      }
-      if (errorCode === '23503') {
-        return res.status(422).json({ message: 'Invalid foreign key value.', details: err.message });
-      }
-      return res.status(500).json({ message: err.message });
-    }
-  }
-);
 
 /**
  * @swagger
@@ -663,8 +475,6 @@ router.post('/tickets', apiRequestLimiter,
  *       500:
  *         $ref: '#/components/responses/ServerInternalError'
  */
-
-
 router.get('/tickets', apiRequestLimiter,
   [
     query('page', 'Page must be a number').optional({ checkFalsy: true }).isNumeric().toInt(),
@@ -691,6 +501,7 @@ router.get('/tickets', apiRequestLimiter,
     query('isConfidential', 'IsConfidential must be either true or false').optional({ checkFalsy: true }).isBoolean().toBoolean(),
 
     query('search', 'Search must be a non-empty string.').optional({ checkFalsy: true }).isString(),
+    query('searchCaseSensitive', 'SearchCaseSensitive must be either true or false').optional({ checkFalsy: true }).isBoolean().toBoolean(),
     query('searchFields', 'SearchFields must be a valid comma-separated list of fields [title, body, street, houseNumber, unit, cityName, regionName, postalCode, fullAddress, closeReason]')
       .optional({ checkFalsy: true })
       .custom((value) => {
@@ -725,10 +536,11 @@ router.get('/tickets', apiRequestLimiter,
 
     const search = req.query.search;
     const searchFields = req.query.searchFields ? req.query.searchFields.split(',') : ['title', 'body', 'street', 'houseNumber', 'unit', 'cityName', 'regionName', 'postalCode', 'fullAddress', 'closeReason'];
+    const searchCaseSensitive = req.query.searchCaseSensitive === true ? 'Sequelize.Op.like' : 'Sequelize.Op.iLike'
     if (search && searchFields.length) {
       where = {
         ['Sequelize.Op.or']: searchFields.map(field => ({
-          [toSnakeCase(field)]: { ['Sequelize.Op.iLike']: `%${search}%` }
+          [toSnakeCase(field)]: { [searchCaseSensitive]: `%${search}%` }
         }))
       };
     }
@@ -766,6 +578,417 @@ router.get('/tickets', apiRequestLimiter,
     } catch (err) {
       updateEventLog(req, err);
       return res.status(500).json({ message: err.message });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /v1/tickets:
+ *   post:
+ *     summary: Create a new ticket
+ *     description: Allows for the creation of a new ticket, associating it with user details and other metadata.
+ *     tags: [2nd]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *               - creator
+ *             $ref: '#/components/request/Ticket'
+ *     responses:
+ *       201:
+ *         description: Ticket created successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/response/Ticket'
+ *       400:
+ *         description: Invalid request parameters.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 errors:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       msg:
+ *                         type: string
+ *                         example: "Title must not exceed 255 characters."
+ *                       param:
+ *                         type: string
+ *                         example: "title"
+ *                       location:
+ *                         type: string
+ *                         example: "body"
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedAccessInvalidTokenProvided'
+ *       403:
+ *         description: Unauthorized access - Update other users!
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User is not authorized to create tickets."
+ *       422:
+ *         description: |
+ *           Unprocessable Content. This can occur in different scenarios:
+ *           - Foreign key violation: Invalid foreign key value.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Invalid foreign key value."
+ *                 details:
+ *                   type: string
+ *                   example: "insert or update on table \"mra_tickets\" violates foreign key constraint \"mra_tickets_ticket_category_id_fkey\""
+ *       429:
+ *         $ref: '#/components/responses/ApiRateLimitExceeded'
+ *       500:
+ *         $ref: '#/components/responses/ServerInternalError'
+ */
+router.post('/tickets', apiRequestLimiter,
+  [
+    body('title')
+      .notEmpty().withMessage('Title is required.')
+      .isString().withMessage('Title must be a string.')
+      .isLength({ max: 255 }).withMessage('Title must not exceed 255 characters.'),
+    body('body', 'Body must be a string.').optional().isString(),
+    body('customerId', 'Customer ID must be an integer greater than 0.').optional().isInt({ gt: 0 }),
+    body('ticketCategoryId', 'Ticket category ID must be an integer greater than 0.').optional().isInt({ gt: 0 }),
+    body('isConfidential', 'Is confidential must be a boolean.').optional().isBoolean(),
+
+    body('mediaUrls', 'Media URLs must be a non-empty array.')
+      .optional()
+      .isArray({ min: 1 }) // Ensure it's an array and not empty
+      .custom((urls) => {
+        // Check each URL in the array
+        urls.forEach(url => {
+          if (typeof url !== 'string' || !/^https?:\/\/.+/i.test(url)) {
+            throw new Error(`Invalid URL detected: ${url}`);
+          }
+        });
+        return true;
+      }),
+
+    body('geoLatitude', 'Latitude must be a float between -90 and 90.').optional().isFloat({ min: -90, max: 90 }),
+    body('geoLongitude', 'Longitude must be a float between -180 and 180.').optional().isFloat({ min: -180, max: 180 }),
+
+    oneOf([
+      [
+        body('cityId').isEmpty(),
+        body('cityName').isEmpty()
+      ],
+      [
+        body('cityId', 'City ID must be an integer greater than 0').exists().isInt({ gt: 0 }),
+        body('cityName').isEmpty()
+      ],
+      [
+        body('cityId').isEmpty(),
+        body('cityName', 'City name must be a string').exists().isString()
+      ]
+    ], 'Either cityId or cityName must be provided, but not both, or both can be null.'),
+
+    body('ticketId', 'ticketId should not be provided in the request.').not().exists(),
+    body('fullAddress', 'fullAddress should not be provided in the request.').not().exists(),
+    body('creator', 'Creator is set automatically and should not be provided in the request.').not().exists(),
+    body('updator', 'Updator is set automatically and should not be provided in the request.').not().exists(),
+  ],
+  checkRequestValidity,
+  async (req, res, next) => {
+    const { customerId } = req.body;
+    const isPrivateCustomer = await db.isPrivateCustomer(customerId);
+    const domain = isPrivateCustomer ? String(customerId) : '0';
+    const processedBody = toSnakeCase(req.body);
+    const middleware = authorizeUser({ dom: domain, obj: 'mra_tickets', act: 'C', attrs: { set: processedBody } });
+    middleware(req, res, next);
+  },
+  async (req, res) => {
+    try {
+      const ticket = req.conditions.set;
+      const createdTicket = await db.createTicket(ticket);
+      if (!createdTicket) {
+        throw new Error('Failed to create ticket.');
+      }
+      return res.status(201).json(toLowerCamelCase(createdTicket));
+    } catch (err) {
+      updateEventLog(req, err);
+
+      const errorCode = err.original?.code;
+      if (errorCode === '23503') {
+        return res.status(422).json({ message: 'Invalid foreign key value.', details: err.message });
+      }
+      return res.status(500).json({ message: err.message });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /v1/tickets/{ticketId}:
+ *   put:
+ *     summary: Update an existing ticket
+ *     description: Allows updating the details of an existing ticket, such as title, body, or metadata.
+ *     tags: [2nd]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: ticketId
+ *         in: path
+ *         required: true
+ *         description: The ID of the ticket to be updated.
+ *         type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *             $ref: '#/components/request/Ticket'
+ *     responses:
+ *       200:
+ *         description: Ticket updated successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/response/Ticket'
+ *       400:
+ *         description: Invalid request parameters.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 errors:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       msg:
+ *                         type: string
+ *                         example: "Title must not exceed 255 characters."
+ *                       param:
+ *                         type: string
+ *                         example: "title"
+ *                       location:
+ *                         type: string
+ *                         example: "body"
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedAccessInvalidTokenProvided'
+ *       403:
+ *         description: Unauthorized access - Update other users!
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User is not authorized to create tickets."
+ *       422:
+ *         description: |
+ *           Unprocessable Content. This can occur in different scenarios:
+ *           - Foreign key violation: Invalid foreign key value.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Invalid foreign key value."
+ *                 details:
+ *                   type: string
+ *                   example: "insert or update on table \"mra_tickets\" violates foreign key constraint \"mra_tickets_ticket_category_id_fkey\""
+ *       429:
+ *         $ref: '#/components/responses/ApiRateLimitExceeded'
+ *       500:
+ *         $ref: '#/components/responses/ServerInternalError'
+ */
+router.put('/tickets/:ticketId', apiRequestLimiter,
+  [
+    param('ticketId')
+      .notEmpty().withMessage('Ticket ID is required.')
+      .isInt().withMessage('Ticket ID must be an integer.')
+      .toInt(),
+
+    body('title')
+      .optional()
+      .isString().withMessage('Title must be a string.')
+      .isLength({ max: 255 }).withMessage('Title must not exceed 255 characters.'),
+    body('body', 'Body must be a string.').optional().isString(),
+    body('customerId', 'Customer ID must be an integer greater than 0.').optional().isInt({ gt: 0 }),
+    body('ticketCategoryId', 'Ticket category ID must be an integer greater than 0.').optional().isInt({ gt: 0 }),
+    body('isConfidential', 'Is confidential must be a boolean.').optional().isBoolean(),
+
+    body('mediaUrls', 'Media URLs must be a non-empty array.')
+      .optional()
+      .isArray({ min: 1 })
+      .custom((urls) => {
+        urls.forEach(url => {
+          if (typeof url !== 'string' || !/^https?:\/\/.+/i.test(url)) {
+            throw new Error(`Invalid URL detected: ${url}`);
+          }
+        });
+        return true;
+      }),
+
+    body('geoLatitude', 'Latitude must be a float between -90 and 90.').optional().isFloat({ min: -90, max: 90 }),
+    body('geoLongitude', 'Longitude must be a float between -180 and 180.').optional().isFloat({ min: -180, max: 180 }),
+
+    oneOf([
+      [
+        body('cityId').isEmpty(),
+        body('cityName').isEmpty()
+      ],
+      [
+        body('cityId', 'City ID must be an integer greater than 0').exists().isInt({ gt: 0 }),
+        body('cityName').isEmpty()
+      ],
+      [
+        body('cityId').isEmpty(),
+        body('cityName', 'City name must be a string').exists().isString()
+      ]
+    ], 'Either cityId or cityName must be provided, but not both, or both can be null.'),
+
+    body('ticketId', 'ticketId should not be provided in the request body.').not().exists(),
+    body('fullAddress', 'fullAddress should not be provided in the request body.').not().exists(),
+    body('creator', 'Creator is set automatically and should not be provided in the request.').not().exists(),
+    body('updator', 'Updator is set automatically and should not be provided in the request.').not().exists(),
+  ],
+  checkRequestValidity,
+  async (req, res, next) => {
+    const { ticketId } = req.params;
+    const where = { ticket_id: ticketId };
+
+    const { customerId } = req.body;
+    const isPrivateCustomer = await db.isPrivateCustomer(customerId);
+    const domain = isPrivateCustomer ? String(customerId) : '0';
+    const processedBody = toSnakeCase(req.body);
+    const middleware = authorizeUser({ dom: domain, obj: 'mra_tickets', act: 'U', attrs: { set: processedBody, where } });
+    middleware(req, res, next);
+  },
+  async (req, res) => {
+    try {
+      const ticket = req.conditions.set;
+      const where = req.conditions.where;
+
+      const updatedTicket = await db.updateTicket(where, ticket);
+      if (!updatedTicket) {
+        throw new Error('Failed to update ticket.');
+      }
+      return res.status(200).json(toLowerCamelCase(updatedTicket));
+    } catch (err) {
+      updateEventLog(req, err);
+
+      const errorCode = err.original?.code;
+      if (errorCode === '23503') {
+        return res.status(422).json({ message: 'Invalid foreign key value.', details: err.message });
+      }
+      return res.status(500).json({ message: err.message });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /v1/tickets/{ticketId}:
+ *   delete:
+ *     summary: Delete a ticket
+ *     description: Deletes a ticket by its unique ID if the requesting user has the required permissions.
+ *     tags: [2nd]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: ticketId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Numeric ID of the ticket to delete.
+ *     responses:
+ *       204:
+ *         description: The ticket has been deleted successfully.
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedAccessInvalidTokenProvided'
+ *       403:
+ *         description: Unauthorized access
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User is not authorized to delete ticket."
+ *       404:
+ *         description: Not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "No ticket found with the specified ticketId."
+ *       429:
+ *         $ref: '#/components/responses/ApiRateLimitExceeded'
+ *       500:
+ *         $ref: '#/components/responses/ServerInternalError'
+ */
+
+router.delete('/tickets/:ticketId', apiRequestLimiter,
+  [
+    param('ticketId')
+      .notEmpty().withMessage('Ticket ID is required as a parameter.')
+      .isInt().withMessage('Ticket ID must be an integer.')
+      .toInt(),
+  ],
+  checkRequestValidity,
+  async (req, res, next) => {
+    const { ticketId } = req.params;
+    const where = { ticket_id: ticketId };
+
+    const tickets = await db.getTickets(where, { limit: 1, offset: 0 });    
+    if (!tickets || tickets.length === 0) {
+      return res.status(404).json({ message: 'No ticket found with the specified ticketId.' });
+    }
+
+    const { customer_id } = tickets[0].customer;
+    const isPrivateCustomer = await db.isPrivateCustomer(customer_id);
+    const domain = isPrivateCustomer ? String(customer_id) : '0';
+    const middleware = authorizeUser({ dom: domain, obj: 'mra_tickets', act: 'D', attrs: { where } });
+    middleware(req, res, next);
+  },
+  async (req, res) => {
+    try {
+      const where = req.conditions.where;
+
+      const result = await db.deleteTicket(where);
+      if (!result) {
+        return res.status(404).json({ message: 'No ticket found with the specified ticketId.' });
+      }
+
+      return res.status(204).send();
+    } catch (err) {
+      updateEventLog(req, err);
+      return res.status(500).json({ message: 'Failed to delete the ticket due to an internal error.', error: err.message });
     }
   }
 );
