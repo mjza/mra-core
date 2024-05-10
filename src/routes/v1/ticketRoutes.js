@@ -877,6 +877,13 @@ router.put('/tickets/:ticketId', apiRequestLimiter,
     const { ticketId } = req.params;
     const where = { ticket_id: ticketId };
 
+    // Set the ownership columns in where clause
+    const tickets = await db.getTickets(where, { limit: 1, offset: 0 });    
+    if (!tickets || tickets.length === 0) {
+      return res.status(404).json({ message: 'No ticket found with the specified ticketId.' });
+    }
+    where.creator = tickets[0].creator.user_id;
+
     const { customerId } = req.body;
     const isPrivateCustomer = await db.isPrivateCustomer(customerId);
     const domain = isPrivateCustomer ? String(customerId) : '0';
