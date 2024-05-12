@@ -53,30 +53,20 @@ const isValidUrl = (inputUrl) => {
  *                 example: You must provide a valid JWT token.
  */
 /**
- * Middleware to check if a user is authorized to perform a task.
+ * Middleware function for Express that authorizes a user based on provided extra data and the incoming request.
+ * It attempts to authorize the user and on success, updates the request object with user details, roles, and conditions.
+ * It also manages logging of the event, whether it is a new event or an update to an existing one.
+ *
+ * @param {Object} extraData - Data necessary for the authorization process such as domain, object, action, and attributes.
+ *                             This is used to determine the context in which the user is attempting to operate.
  *
  * @param {Object} req - The request object from Express.js.
  * @param {Object} res - The response object from Express.js.
- * @param {function} next - The next middleware function in the Express.js route.
+ * @returns {Function} Returns an asynchronous middleware function which takes Express `req`, `res`, and `next` parameters.
  */
 const authorizeUser = (extraData) => async (req, res, next) => {
     try {
-        const body = {
-            dom: extraData.dom,
-            obj: extraData.obj,
-            act: extraData.act,
-            attrs: extraData.attrs
-        };
-        
-        const serviceUrl = process.env.AUTH_SERVER_URL + '/v1/authorize';
-
-        const authHeader = req.headers['authorization'];
-
-        const response = await axios.post(serviceUrl, body, {
-            headers: {
-                Authorization: authHeader
-            }
-        });
+        const response = await isUserAuthorized(extraData, req);
 
         const { user, roles, conditions } = response.data;
         if(!req.logId) {
@@ -104,6 +94,45 @@ const authorizeUser = (extraData) => async (req, res, next) => {
 };
 
 /**
+ * Asynchronously determines if a user is authorized to perform an action on an object within a domain, using specified attributes, based on the provided request details and extra data.
+ *
+ * @async
+ * @param {Object} extraData - An object containing the necessary data for authorization:
+ *                             `dom` (string) - The domain in which the authorization is to be checked,
+ *                             `obj` (string) - The object the action is to be performed on,
+ *                             `act` (string) - The action to be authorized,
+ *                             `attrs` (Object) - Additional attributes that may be required for authorization.
+ * @param {Object} req - The HTTP request object from which the authorization header is extracted.
+ * @returns {Promise<Object>} A Promise that resolves to the response from the authorization server.
+ * @throws {Error} Throws an error if the request to the authorization server fails.
+ *
+ */
+const isUserAuthorized = async (extraData, req) => {
+    try {
+        const body = {
+            dom: extraData.dom,
+            obj: extraData.obj,
+            act: extraData.act,
+            attrs: extraData.attrs
+        };
+        
+        const serviceUrl = process.env.AUTH_SERVER_URL + '/v1/authorize';
+
+        const authHeader = req.headers['authorization'];
+
+        const response = await axios.post(serviceUrl, body, {
+            headers: {
+                Authorization: authHeader
+            }
+        });
+
+        return response;
+    } catch (error) {
+        throw error;
+    }
+};
+
+/**
  * Middleware to validate request data using validationResult.
  * It checks if the request meets the validation criteria set by previous validation middlewares.
  * If the validation fails, it sends a 400 status code with the validation errors.
@@ -121,4 +150,4 @@ const checkRequestValidity = (req, res, next) => {
     next();
 };
 
-module.exports = { testUrlAccessibility, isValidUrl, authorizeUser, checkRequestValidity };
+module.exports = { testUrlAccessibility, isValidUrl, authorizeUser, isUserAuthorized, checkRequestValidity };

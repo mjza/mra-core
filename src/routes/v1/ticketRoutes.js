@@ -4,7 +4,7 @@ const router = require('express').Router();
 const db = require('../../utils/database');
 const { apiRequestLimiter } = require('../../utils/rateLimit');
 const { updateEventLog } = require('../../utils/logger');
-const { authorizeUser, checkRequestValidity } = require('../../utils/validations');
+const { authorizeUser, checkRequestValidity, isUserAuthorized } = require('../../utils/validations');
 
 /**
  * @swagger
@@ -569,12 +569,39 @@ router.get('/tickets', apiRequestLimiter,
   async (req, res) => {
     try {
       const ticketsArray = await db.getTickets(req.conditions.where, req.pagination, req.order);
-
       // Determine if there are more items beyond the current page
       const hasMore = ticketsArray.length > (req.pagination.limit - 1);
-      const results = hasMore ? ticketsArray.slice(0, -1) : ticketsArray; // Remove the extra item if present
+      const slicedTicketsArray = hasMore ? ticketsArray.slice(0, -1) : ticketsArray; // Remove the extra item if present
 
-      res.json({ hasMore, data: results.map(ticket => toLowerCamelCase(ticket)) });
+      // Initialize a Set to store IDs of customers known to be public
+      const publicCustomers = new Set();
+
+      const filteredTickets = await Promise.all(slicedTicketsArray.map(async (ticket) => {
+        const customerId = ticket.customer_id;
+
+        // Check if the customer is already known to be public
+        if (publicCustomers.has(customerId)) {
+          return ticket; // Keep the ticket if the customer is known to be public
+        }
+
+        // Check privacy status from the database if not already known to be public
+        const isPrivateCustomer = await db.isPrivateCustomer(customerId);
+
+        if (!isPrivateCustomer) {
+          // If the customer is public, add to the cache and keep the ticket
+          publicCustomers.add(customerId);
+          return ticket;
+        }
+
+        // If the customer is private, proceed with authorization check
+        const where = { ticket_id: ticket.ticket_id };
+        const response = await isUserAuthorized({ dom: customerId, obj: 'mra_tickets', act: 'R', attrs: { where } }, req);
+
+        // Check if the authorization was successful (HTTP status code 200)
+        return response.status === 200 ? ticket : null; // Keep the ticket if user is authorized, otherwise filter it out
+      })).then(results => results.filter(ticket => ticket !== null)); // Filter out null entries
+
+      res.json({ hasMore, data: filteredTickets.map(ticket => toLowerCamelCase(ticket)) });
     } catch (err) {
       updateEventLog(req, err);
       return res.status(500).json({ message: err.message });
@@ -878,7 +905,7 @@ router.put('/tickets/:ticketId', apiRequestLimiter,
     const where = { ticket_id: ticketId };
 
     // Set the ownership columns in where clause
-    const tickets = await db.getTickets(where, { limit: 1, offset: 0 });    
+    const tickets = await db.getTickets(where, { limit: 1, offset: 0 });
     if (!tickets || tickets.length === 0) {
       return res.status(404).json({ message: 'No ticket found with the specified ticketId.' });
     }
@@ -972,7 +999,7 @@ router.delete('/tickets/:ticketId', apiRequestLimiter,
     const { ticketId } = req.params;
     const where = { ticket_id: ticketId };
 
-    const tickets = await db.getTickets(where, { limit: 1, offset: 0 });    
+    const tickets = await db.getTickets(where, { limit: 1, offset: 0 });
     if (!tickets || tickets.length === 0) {
       return res.status(404).json({ message: 'No ticket found with the specified ticketId.' });
     }
