@@ -512,12 +512,14 @@ router.get('/tickets', apiRequestLimiter,
   ],
   checkRequestValidity,
   (req, res, next) => {
+    /*
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 30;
     req.pagination = {
       limit: limit + 1,
       offset: (page - 1) * limit
     };
+    */
 
     // example: ?order=createdAt,DESC;title,ASC
     const order = req.query.order
@@ -568,38 +570,51 @@ router.get('/tickets', apiRequestLimiter,
   },
   async (req, res) => {
     try {
-      const ticketsArray = await db.getTickets(req.conditions.where, req.pagination, req.order);
-      // Determine if there are more items beyond the current page
-      const hasMore = ticketsArray.length > (req.pagination.limit - 1);
-      const slicedTicketsArray = hasMore ? ticketsArray.slice(0, -1) : ticketsArray; // Remove the extra item if present
-
-      // Initialize a Set to store IDs of customers known to be public
+      // Initialize pagination and prepare to track public customers
+      let currentPage = parseInt(req.query.page) || 1;
+      const pageSize = parseInt(req.query.limit) || 30;
       const publicCustomers = new Set();
+      let filteredTickets = [];
+      let hasMore = false;
 
-      const filteredTickets = await Promise.all(slicedTicketsArray.map(async (ticket) => {
-        const customerId = ticket.customer_id;
+      do {
+        req.pagination = {
+          limit: pageSize + 1,
+          offset: (currentPage - 1) * pageSize
+        };
+        const ticketsArray = await db.getTickets(req.conditions.where, req.pagination, req.order);
+        hasMore = ticketsArray.length > pageSize;
+        const slicedTicketsArray = hasMore ? ticketsArray.slice(0, pageSize) : ticketsArray; // Adjust array size if over limit due to hasMore check
 
-        // Check if the customer is already known to be public
-        if (publicCustomers.has(customerId)) {
-          return ticket; // Keep the ticket if the customer is known to be public
+        const newFilteredTickets = await Promise.all(slicedTicketsArray.map(async (ticket) => {
+          const customerId = ticket.customer_id;
+
+          if (publicCustomers.has(customerId)) {
+            return ticket; // Skip DB check for known public customers
+          }
+
+          const isPrivateCustomer = await db.isPrivateCustomer(customerId);
+          if (!isPrivateCustomer) {
+            publicCustomers.add(customerId);
+            return ticket; // Keep public customer tickets
+          }
+
+          // Proceed with authorization check for private customers
+          const where = { ticket_id: ticket.ticket_id };
+          const response = await isUserAuthorized({ dom: customerId, obj: 'mra_tickets', act: 'R', attrs: { where } }, req);
+          return response.status === 200 ? ticket : null; // Keep allowed tickets
+        })).then(results => results.filter(ticket => ticket !== null));
+
+        // Accumulate non-filtered tickets
+        filteredTickets = filteredTickets.concat(newFilteredTickets);
+
+        // Increment page if necessary to continue fetching
+        if (filteredTickets.length === 0 && hasMore) {
+          currentPage++;
+        } else {
+          break; // Stop if we have valid tickets or no more data
         }
-
-        // Check privacy status from the database if not already known to be public
-        const isPrivateCustomer = await db.isPrivateCustomer(customerId);
-
-        if (!isPrivateCustomer) {
-          // If the customer is public, add to the cache and keep the ticket
-          publicCustomers.add(customerId);
-          return ticket;
-        }
-
-        // If the customer is private, proceed with authorization check
-        const where = { ticket_id: ticket.ticket_id };
-        const response = await isUserAuthorized({ dom: customerId, obj: 'mra_tickets', act: 'R', attrs: { where } }, req);
-
-        // Check if the authorization was successful (HTTP status code 200)
-        return response.status === 200 ? ticket : null; // Keep the ticket if user is authorized, otherwise filter it out
-      })).then(results => results.filter(ticket => ticket !== null)); // Filter out null entries
+      } while (true); // Loop until conditions are met
 
       res.json({ hasMore, data: filteredTickets.map(ticket => toLowerCamelCase(ticket)) });
     } catch (err) {
