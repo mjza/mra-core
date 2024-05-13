@@ -1,7 +1,7 @@
 require('dotenv').config({
     path: 'src/config/.env'
 });
-const localhost = 'http://localhost:4000';
+const localhost = 'http://localhost:3100';
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const helmet = require('helmet');

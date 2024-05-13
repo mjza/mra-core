@@ -14,7 +14,7 @@ let server = null;
  * This function asynchronously sets up the application by calling `createApp`, which
  * configures the Express app with all the necessary routes, middleware, and any additional
  * setup required. Once the app is initialized, it listens on the port defined by the
- * `PORT` environment variable, defaulting to 4000 if not specified.
+ * `PORT` environment variable, defaulting to 3100 if not specified.
  * 
  * The server instance is globally accessible within the module that defines this function,
  * allowing for further actions such as graceful shutdown or integration with testing frameworks.
@@ -29,7 +29,7 @@ let server = null;
  */
 async function startServer() {
   const app = await createApp();
-  const port = process.env.PORT || 4000;
+  const port = process.env.PORT || 3100;
   server = app.listen(port, () => console.log(`Server running on port ${port}`));
 }
 

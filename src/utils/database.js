@@ -467,12 +467,13 @@ async function deleteTicket(where) {
  * @returns {Promise<boolean>} A promise that resolves to true if the customer is private, false otherwise.
  */
 const isPrivateCustomer = async (customerId) => {
-  if (!customerId) {
+  if (!customerId && isNaN(customerId)) {
     return false; // Returns false if no customerId is provided
   }
 
   const customer = await MraCustomers.findByPk(customerId, {
     attributes: ['is_private'], // Optionally limit to only load the 'is_private' field
+    raw: true
   });
 
   // Check if customer was found and return the 'is_private' status, otherwise false
@@ -498,6 +499,5 @@ module.exports = {
   createTicket,
   updateTicket,
   deleteTicket,
-  isPrivateCustomer,
-  
+  isPrivateCustomer,  
 };

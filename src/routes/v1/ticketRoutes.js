@@ -316,6 +316,8 @@ const { authorizeUser, checkRequestValidity, isUserAuthorized } = require('../..
  *     summary: Retrieve a list of tickets
  *     description: Fetches a list of tickets based on various filters and pagination. It supports searching across multiple fields and date ranges.
  *     tags: [2nd]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: page
@@ -586,27 +588,46 @@ router.get('/tickets', apiRequestLimiter,
         hasMore = ticketsArray.length > pageSize;
         const slicedTicketsArray = hasMore ? ticketsArray.slice(0, pageSize) : ticketsArray; // Adjust array size if over limit due to hasMore check
 
-        const newFilteredTickets = await Promise.all(slicedTicketsArray.map(async (ticket) => {
-          const customerId = ticket.customer_id;
+        for (const ticket of slicedTicketsArray) {
+          const customerId = ticket.customer?.customer_id;
+
+          if (isNaN(customerId)) {
+            filteredTickets.push(ticket);
+            continue;
+          }
 
           if (publicCustomers.has(customerId)) {
-            return ticket; // Skip DB check for known public customers
+            filteredTickets.push(ticket);
+            continue;
           }
 
           const isPrivateCustomer = await db.isPrivateCustomer(customerId);
+
           if (!isPrivateCustomer) {
             publicCustomers.add(customerId);
-            return ticket; // Keep public customer tickets
+            filteredTickets.push(ticket); // Keep public customer tickets
+            continue;
           }
 
-          // Proceed with authorization check for private customers
-          const where = { ticket_id: ticket.ticket_id };
-          const response = await isUserAuthorized({ dom: customerId, obj: 'mra_tickets', act: 'R', attrs: { where } }, req);
-          return response.status === 200 ? ticket : null; // Keep allowed tickets
-        })).then(results => results.filter(ticket => ticket !== null));
-
-        // Accumulate non-filtered tickets
-        filteredTickets = filteredTickets.concat(newFilteredTickets);
+          // Proceed with authorization check for private customers     
+          // We check for each customer, as we might have some forbidden tickets for some users    
+          try {
+            // It is important to pass a where that includes the domain_column of the table
+            // In case of ticket it is the customer_id 
+            const where = { ticket_id: ticket.ticket_id, customer_id: customerId };
+            const response = await isUserAuthorized({ dom: String(customerId), obj: 'mra_tickets', act: 'R', attrs: { where } }, req);
+            if (response.status === 200) {
+              filteredTickets.push(ticket); // Keep allowed tickets
+            }
+          } catch (authError) {
+            if (authError.response && authError.response.status === 403) {
+              // If not authorized, the ticket is not added to filteredTickets, effectively filtering it out
+            } else {
+              // Re-throw other errors to be caught by the outer catch block
+              throw authError;
+            }
+          }
+        }
 
         // Increment page if necessary to continue fetching
         if (filteredTickets.length === 0 && hasMore) {
@@ -617,9 +638,13 @@ router.get('/tickets', apiRequestLimiter,
       } while (true); // Loop until conditions are met
 
       res.json({ hasMore, data: filteredTickets.map(ticket => toLowerCamelCase(ticket)) });
-    } catch (err) {
-      updateEventLog(req, err);
-      return res.status(500).json({ message: err.message });
+    } catch (error) {
+      await updateEventLog(req, { error: 'Error in authorize user for tickets.', details: error });
+      if (error.response) {
+        // Relay the entire response from the external service
+        return res.status(error.response.status).json(error.response.data);
+      }
+      return res.status(500).json({ message: error.message });
     }
   }
 );
