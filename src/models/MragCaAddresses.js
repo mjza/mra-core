@@ -83,7 +83,7 @@ module.exports = function(sequelize, DataTypes) {
 						comment: "The postal code associated with the address."
 				},
 				full_address: {
-						type: DataTypes.STRING(255),
+						type: DataTypes.TEXT,
 						allowNull: true,
 						comment: "The complete address in a standardized format.(full_addr in statcan.gc.ca)"
 				},
