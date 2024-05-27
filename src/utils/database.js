@@ -193,7 +193,7 @@ const deleteAuditLog = async (logId) => {
  *                              'offset' specifies the number of user details to skip.
  * @returns {Object[]} An array of user details objects. Each object contains details such as
  *                     user_id, first_name, middle_name, last_name, gender_id, date_of_birth,
- *                     profile_picture_url, profile_picture_thumbnail_url, creator, created_at,
+ *                     private_profile_picture_url, creator, created_at,
  *                     updator, and updated_at. Caller must pass `limit + 1` so if more items
  *                     are available, allowing the caller to determine if additional pages exist.
  */
@@ -208,7 +208,7 @@ async function getUserDetails(where, pagination) {
       as: "gender",
       attributes: ['gender_id', 'gender_name'],
     }],
-    attributes: ['user_id', 'first_name', 'middle_name', 'last_name', 'gender_id', 'date_of_birth', 'profile_picture_url', 'profile_picture_thumbnail_url', 'creator', 'created_at', 'updator', 'updated_at'],
+    attributes: ['user_id', 'first_name', 'middle_name', 'last_name', 'gender_id', 'date_of_birth', 'private_profile_picture_url', 'creator', 'created_at', 'updator', 'updated_at'],
   });
 
   return userDetails && userDetails.map(user => user.get({ plain: true }));

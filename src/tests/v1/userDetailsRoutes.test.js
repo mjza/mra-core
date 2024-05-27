@@ -33,8 +33,7 @@ describe('/user_details endpoints', () => {
             lastName: 'string3',
             genderId: 1,
             dateOfBirth: '2023-12-07',
-            profilePictureUrl: 'http://example.com/123',
-            profilePictureThumbnailUrl: 'http://example.com/124'
+            privateProfilePictureUrl: 'http://example.com/123'
         };
     });
 
@@ -89,8 +88,7 @@ describe('/user_details endpoints', () => {
             expect(res.body.genderId).toBe(userDetails.genderId);
             expect(res.body.gender.genderName).toBe('Female');
             expect(res.body.dateOfBirth).toBe(userDetails.dateOfBirth);
-            expect(res.body.profilePictureUrl).toBe(userDetails.profilePictureUrl);
-            expect(res.body.profilePictureThumbnailUrl).toBe(userDetails.profilePictureThumbnailUrl);
+            expect(res.body.privateProfilePictureUrl).toBe(userDetails.privateProfilePictureUrl);
             expect(res.body.creator).toBe(userDetails.userId);
             expect(res.body.createdAt).toBeDefined();
             expect(res.body.updator).toBeNull();
@@ -153,8 +151,7 @@ describe('/user_details endpoints', () => {
             expect(item.genderId).toBe(userDetails.genderId);
             expect(item.gender.genderName).toBe('Female');
             expect(item.dateOfBirth).toBe(userDetails.dateOfBirth);
-            expect(item.profilePictureUrl).toBe(userDetails.profilePictureUrl);
-            expect(item.profilePictureThumbnailUrl).toBe(userDetails.profilePictureThumbnailUrl);
+            expect(item.privateProfilePictureUrl).toBe(userDetails.privateProfilePictureUrl);
             expect(item.creator).toBe(userDetails.userId);
             expect(item.createdAt).toBeDefined();
             expect(item.updator).toBeNull();
@@ -181,8 +178,7 @@ describe('/user_details endpoints', () => {
             userDetails.lastName += 'x';
             userDetails.genderId = 2;
             userDetails.dateOfBirth = '2023-12-08';
-            userDetails.profilePictureUrl += 'x';
-            userDetails.profilePictureThumbnailUrl += 'x';
+            userDetails.privateProfilePictureUrl += 'x';
 
             const res = await request(app).put(`/v1/user_details/${userDetails.userId}`).send(userDetails).set('Authorization', `Bearer ${authData.token}`);
 
@@ -194,8 +190,7 @@ describe('/user_details endpoints', () => {
             expect(res.body.genderId).toBe(userDetails.genderId);
             expect(res.body.gender.genderName).toBe('Male');
             expect(res.body.dateOfBirth).toBe(userDetails.dateOfBirth);
-            expect(res.body.profilePictureUrl).toBe(userDetails.profilePictureUrl);
-            expect(res.body.profilePictureThumbnailUrl).toBe(userDetails.profilePictureThumbnailUrl);
+            expect(res.body.privateProfilePictureUrl).toBe(userDetails.privateProfilePictureUrl);
             expect(res.body.creator).toBe(userDetails.userId);
             expect(res.body.createdAt).toBeDefined();
             expect(res.body.updator).toBe(userDetails.userId);
