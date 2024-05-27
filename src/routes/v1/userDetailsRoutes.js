@@ -438,8 +438,8 @@ router.post('/user_details', apiRequestLimiter,
 
       return res.status(500).json({ message: err.message });
     }
-  });
-
+  }
+);
 
 /**
  * @swagger
@@ -648,7 +648,7 @@ router.put('/user_details/:userId', apiRequestLimiter,
 
       return res.status(500).json({ message: err.message });
     }
-  });
-
+  }
+);
 
 module.exports = router;
