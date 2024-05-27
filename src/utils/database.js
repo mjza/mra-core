@@ -23,13 +23,13 @@ const addDateRangeFilter = (where, query, field) => {
   const fieldBefore = `${field}Before`;
 
   if (query[fieldAfter] || query[fieldBefore]) {
-      where[field] = {};
-      if (query[fieldAfter]) {
-          where[field][Sequelize.Op.gte] = new Date(query[fieldAfter]);
-      }
-      if (query[fieldBefore]) {
-          where[field][Sequelize.Op.lte] = new Date(query[fieldBefore]);
-      }
+    where[field] = {};
+    if (query[fieldAfter]) {
+      where[field][Sequelize.Op.gte] = new Date(query[fieldAfter]);
+    }
+    if (query[fieldBefore]) {
+      where[field][Sequelize.Op.lte] = new Date(query[fieldBefore]);
+    }
   }
 };
 
@@ -203,15 +203,79 @@ async function getUserDetails(where, pagination) {
     where,
     limit,
     offset,
-    include: [{
-      model: MraGenderTypes,
-      as: "gender",
-      attributes: ['gender_id', 'gender_name'],
-    }],
+    include: [
+      {
+        model: MraGenderTypes,
+        as: "gender",
+        attributes: ['gender_id', 'gender_name'],
+      },
+      {
+        model: MraUsers,
+        as: 'user',
+        attributes: ['public_profile_picture_url']
+      }
+    ],
     attributes: ['user_id', 'first_name', 'middle_name', 'last_name', 'gender_id', 'date_of_birth', 'private_profile_picture_url', 'creator', 'created_at', 'updator', 'updated_at'],
   });
 
-  return userDetails && userDetails.map(user => user.get({ plain: true }));
+  //return userDetails && userDetails.map(user => user.get({ plain: true }));
+
+  return userDetails && userDetails.map(userDetail => {
+    const userDetailPlain = userDetail.get({ plain: true });
+    userDetailPlain.profile_picture_url = userDetailPlain.user ? userDetailPlain.user.public_profile_picture_url : null;
+    delete userDetailPlain.user;
+    if (userDetailPlain.profile_picture_url !== null) {
+      userDetailPlain.is_private_picture = false;
+    } else {
+      userDetailPlain.profile_picture_url = userDetailPlain.private_profile_picture_url;
+      userDetailPlain.is_private_picture = !!userDetailPlain.profile_picture_url;
+      delete userDetailPlain.private_profile_picture_url;
+    }
+    return userDetailPlain;
+  });
+
+}
+
+/**
+ * Updates the profile picture URL in the `MraUsers` model if it is public, or prepares it for storing in `MraUserDetails` if it is a private picture.
+ * 
+ * This function is only called internally by `createUserDetails` or `updateUserDetails` to handle the profile picture URL.
+ *
+ * @param {Object} userDetails - The user details object containing profile picture information.
+ * @param {Object} [where] - The condition for updating the record, typically contains the user ID.
+ * @returns {Promise<Object>} The updated userDetails object.
+ * @throws {Error} If the user's profile picture URL could not be stored publicly.
+ */
+async function storeUserPublicProfileUrl(userDetails, where) {
+  let public_profile_picture_url;
+  if (userDetails.is_private_picture === true) {
+    public_profile_picture_url = null;
+    userDetails.private_profile_picture_url = userDetails.profile_picture_url;
+    delete userDetails.profile_picture_url;
+    delete userDetails.is_private_picture;
+  } else {
+    public_profile_picture_url = userDetails.profile_picture_url;
+    delete userDetails.profile_picture_url;
+    delete userDetails.is_private_picture;
+    userDetails.private_profile_picture_url = null;
+  }
+  const [updateCount] = await MraUsers.update(
+    {
+      public_profile_picture_url,
+      updator: userDetails.updator || userDetails.creator,
+    },
+    {
+      where: {
+        // if where exist it means it is a update otherwise a create request
+        user_id: where ? where.user_id : userDetails.user_id,
+      },
+      returning: true,
+    }
+  );
+  if (updateCount < 0) {
+    throw new Error('Couldn\'t store user\'s profile picture url publically.');
+  }
+  return userDetails;
 }
 
 /**
@@ -221,6 +285,8 @@ async function getUserDetails(where, pagination) {
  * @returns {Object} The created user details object.
  */
 async function createUserDetails(userDetails) {
+
+  userDetails = await storeUserPublicProfileUrl(userDetails);
   const createdRow = await MraUserDetails.create(userDetails);
 
   if (createdRow && createdRow.user_id) {
@@ -239,6 +305,7 @@ async function createUserDetails(userDetails) {
  * @returns {Object} The updated user details object.
  */
 async function updateUserDetails(where, userDetails) {
+  userDetails = await storeUserPublicProfileUrl(userDetails, where);
   const [affectedRowCount] = await MraUserDetails.update(userDetails, { where });
 
   if (affectedRowCount > 0) {
@@ -499,5 +566,5 @@ module.exports = {
   createTicket,
   updateTicket,
   deleteTicket,
-  isPrivateCustomer,  
+  isPrivateCustomer,
 };

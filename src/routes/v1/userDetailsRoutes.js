@@ -15,15 +15,15 @@ const optionalProperties = [
   'last_name',
   'gender_id',
   'date_of_birth',
-  'private_profile_picture_url',
+  'profile_picture_url',
+  'is_private_picture',
 ];
 
 const secretProperties = [
   'first_name',
   'middle_name',
   'last_name',
-  'date_of_birth',
-  'private_profile_picture_url',
+  'date_of_birth'
 ];
 
 /**
@@ -48,8 +48,11 @@ const secretProperties = [
  *               dateOfBirth:
  *                 type: string
  *                 format: date
- *               privateProfilePictureUrl:
+ *               profilePictureUrl:
  *                 type: string
+ *               isPrivatePicture:
+ *                 type: boolean
+ *                 example: false
  *   responses:
  *     UserDetailsObject:
  *       type: object
@@ -67,9 +70,12 @@ const secretProperties = [
  *         dateOfBirth:
  *           type: string
  *           format: date
- *         privateProfilePictureUrl:
+ *         profilePictureUrl:
  *           type: string
  *           example: "https://abc.com/pic1.jpg"
+ *         isPrivatePicture:
+ *           type: boolean
+ *           example: false
  *         creator:
  *           type: integer
  *           example: 2
@@ -198,11 +204,13 @@ router.get('/user_details', apiRequestLimiter,
 
       // Determine if there are more items beyond the current page
       const hasMore = userDetailsArray.length > (req.pagination.limit - 1);
-      const results = hasMore ? userDetailsArray.slice(0, -1) : userDetailsArray; // Remove the extra item if present
+      const results = hasMore ? userDetailsArray.slice(0, -1) : userDetailsArray; // Remove the extra item if present      
 
-      const decryptedDataArray = results.map(userDetails =>
-        toLowerCamelCase(decryptObjectItems(userDetails, secretProperties))
-      );
+      const decryptedDataArray = results.map(userDetails => {
+        // Copy the array and add a new item
+        const newSecretProperties = userDetails.is_private_picture === true ? [...secretProperties, 'profile_picture_url'] : [...secretProperties];
+        return toLowerCamelCase(decryptObjectItems(userDetails, newSecretProperties))
+      });
 
       return res.json({ data: decryptedDataArray, hasMore });
     } catch (err) {
@@ -245,9 +253,12 @@ router.get('/user_details', apiRequestLimiter,
  *               dateOfBirth:
  *                 type: string
  *                 format: date
- *               privateProfilePictureUrl:
+ *               profilePictureUrl:
  *                 type: string
  *                 example: "https://abc.com/pic1.jpg"
+ *               isPrivatePicture:
+ *                 type: boolean
+ *                 example: false
  *     responses:
  *       201:
  *         description: User details created successfully.
@@ -352,7 +363,7 @@ router.post('/user_details', apiRequestLimiter,
       })
       .withMessage('Date of birth must be a valid date.'),
 
-    body('privateProfilePictureUrl')
+    body('profilePictureUrl')
       .optional()
       .isString()
       .withMessage('Private profile picture URL must be a string.')
@@ -361,6 +372,10 @@ router.post('/user_details', apiRequestLimiter,
       .isLength({ max: 255 })
       .withMessage('Private profile picture URL must not exceed 255 characters.'),
 
+    body('isPrivatePicture')
+      .optional()
+      .isBoolean()
+      .withMessage('isPrivatePicture must be a boolean.'),
   ],
   checkRequestValidity,
   (req, res, next) => {
@@ -371,14 +386,17 @@ router.post('/user_details', apiRequestLimiter,
   async (req, res) => {
     try {
       const userDetails = req.conditions.set;
+
       // Set missing properties to null
       optionalProperties.forEach(prop => {
         if (userDetails[prop] === undefined) {
           userDetails[prop] = null;
         }
       });
-      const createdUserDetails = await db.createUserDetails(encryptObjectItems(userDetails, secretProperties));
-      return res.status(201).json(toLowerCamelCase(decryptObjectItems(createdUserDetails, secretProperties)));
+      // Copy the array and add a new item
+      const newSecretProperties = userDetails.is_private_picture === true ? [...secretProperties, 'profile_picture_url'] : [...secretProperties];
+      const createdUserDetails = await db.createUserDetails(encryptObjectItems(userDetails, newSecretProperties));
+      return res.status(201).json(toLowerCamelCase(decryptObjectItems(createdUserDetails, newSecretProperties)));
     } catch (err) {
       updateEventLog(req, err);
 
@@ -441,9 +459,12 @@ router.post('/user_details', apiRequestLimiter,
  *               dateOfBirth:
  *                 type: string
  *                 format: date
- *               privateProfilePictureUrl:
+ *               profilePictureUrl:
  *                 type: string
  *                 example: "https://abc.com/pic1.jpg"
+ *               isPrivatePicture:
+ *                 type: boolean
+ *                 example: false
  *     responses:
  *       200:
  *         description: User details updated successfully.
@@ -544,7 +565,7 @@ router.put('/user_details/:userId', apiRequestLimiter,
       })
       .withMessage('Date of birth must be a valid date.'),
 
-    body('privateProfilePictureUrl')
+    body('profilePictureUrl')
       .optional()
       .isString()
       .withMessage('Private profile picture URL must be a string.')
@@ -553,6 +574,10 @@ router.put('/user_details/:userId', apiRequestLimiter,
       .isLength({ max: 255 })
       .withMessage('Private profile picture URL must not exceed 255 characters.'),
 
+    body('isPrivatePicture')
+      .optional()
+      .isBoolean()
+      .withMessage('isPrivatePicture must be a boolean.'),
   ],
   checkRequestValidity,
   (req, res, next) => {
@@ -571,13 +596,15 @@ router.put('/user_details/:userId', apiRequestLimiter,
         }
       });
 
-      const updatedUserDetails = await db.updateUserDetails(req.conditions.where, encryptObjectItems(userDetails, secretProperties));
+      // Copy the array and add a new item
+      const newSecretProperties = userDetails.is_private_picture === true ? [...secretProperties, 'profile_picture_url'] : [...secretProperties];
+      const updatedUserDetails = await db.updateUserDetails(req.conditions.where, encryptObjectItems(userDetails, newSecretProperties));
 
       if (!updatedUserDetails) {
         return res.status(404).json({ message: 'There is no record for this user in the user details table.' });
       }
 
-      return res.status(200).json(toLowerCamelCase(decryptObjectItems(updatedUserDetails, secretProperties)));
+      return res.status(200).json(toLowerCamelCase(decryptObjectItems(updatedUserDetails, newSecretProperties)));
     } catch (err) {
       updateEventLog(req, err);
 
