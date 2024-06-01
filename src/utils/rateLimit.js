@@ -32,7 +32,7 @@ const rateLimit = require('express-rate-limit');
  * @property {string} message - The message returned when the rate limit is exceeded.
  */
 const apiRequestLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes in milliseconds
+    windowMs: 1 * 60 * 1000, // 1 minutes in milliseconds
     max: 30, // Limit each IP to 30 requests per `window` (here, per 15 minutes)
     message: { message: 'Too many requests from this IP, please try again after 15 minutes.' }
 });
