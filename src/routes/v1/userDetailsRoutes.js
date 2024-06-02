@@ -109,7 +109,7 @@ const secretProperties = [
  *   get:
  *     summary: Retrieve user details
  *     description: Get the details of multiple users based on the provided conditions and pagination. If no specific userId is provided, details of the user whose ID matches the one in the JWT are returned. The response includes a flag to indicate if more records are available.
- *     tags: [1st]
+ *     tags: [2nd]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -226,7 +226,7 @@ router.get('/user_details', apiRequestLimiter,
  *   post:
  *     summary: Create user details
  *     description: Create details for the user whose ID matches the one in the JWT.
- *     tags: [1st]
+ *     tags: [2nd]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -428,7 +428,7 @@ router.post('/user_details', apiRequestLimiter,
  *   put:
  *     summary: Update user details
  *     description: Update details for the user whose ID matches the one in the JWT.
- *     tags: [1st]
+ *     tags: [2nd]
  *     security:
  *       - bearerAuth: []
  *     parameters:

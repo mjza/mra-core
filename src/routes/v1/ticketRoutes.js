@@ -315,7 +315,7 @@ const { authorizeUser, checkRequestValidity, isUserAuthorized } = require('../..
  *   get:
  *     summary: Retrieve a list of tickets
  *     description: Fetches a list of tickets based on various filters and pagination. It supports searching across multiple fields and date ranges.
- *     tags: [2nd]
+ *     tags: [3rd]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -655,7 +655,7 @@ router.get('/tickets', apiRequestLimiter,
  *   post:
  *     summary: Create a new ticket
  *     description: Allows for the creation of a new ticket, associating it with user details and other metadata.
- *     tags: [2nd]
+ *     tags: [3rd]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -810,7 +810,7 @@ router.post('/tickets', apiRequestLimiter,
  *   put:
  *     summary: Update an existing ticket
  *     description: Allows updating the details of an existing ticket, such as title, body, or metadata.
- *     tags: [2nd]
+ *     tags: [3rd]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -986,7 +986,7 @@ router.put('/tickets/:ticketId', apiRequestLimiter,
  *   delete:
  *     summary: Delete a ticket
  *     description: Deletes a ticket by its unique ID if the requesting user has the required permissions.
- *     tags: [2nd]
+ *     tags: [3rd]
  *     security:
  *       - bearerAuth: []
  *     parameters:

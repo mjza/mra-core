@@ -119,8 +119,9 @@ async function createApp() {
                 },
             },
             tags: [
-                { name: '1st', description: 'User Details' },
-                { name: '2nd', description: 'Tickets' },
+                { name: '1st', description: 'Lookup Tables' },
+                { name: '2nd', description: 'User Details' },
+                { name: '3rd', description: 'Tickets' },
             ],
         };
 

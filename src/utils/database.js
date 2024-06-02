@@ -1,4 +1,4 @@
-const { Sequelize, closeSequelize, MraUsers, MraAuditLogsCore, MraGenderTypes, MraUserDetails, MraTickets, MraCustomers, MraTicketCategories, MragCountries, MragCities } = require('../models');
+const { Sequelize, closeSequelize, MraUsers, MraAuditLogsCore, MraGenderTypes, MraUserDetails, MraTickets, MraCustomers, MraTicketCategories, MragCountries, MragCities, } = require('../models');
 const { Op } = Sequelize;
 /**
  * Closes the database connection pool.
@@ -179,6 +179,35 @@ const deleteAuditLog = async (logId) => {
   });
   return { success: deleteCount > 0 };
 };
+
+/**
+ * Retrieves gender types from the database with optional filtering and pagination.
+ *
+ * @async
+ * @function getGenderTypes
+ * @param {Object} where - The conditions to filter the gender types.
+ * @param {Object} pagination - Pagination details.
+ * @param {number} pagination.limit - The maximum number of records to return.
+ * @param {number} pagination.offset - The number of records to skip before starting to collect the result set.
+ * @returns {Promise<Array<Object>>} A promise that resolves to an array of gender types.
+ * @throws {Error} If there is an error fetching gender types from the database.
+ */
+async function getGenderTypes(where, pagination) {
+  const { limit, offset } = pagination;
+  try {
+    const genderTypes = await MraGenderTypes.findAll({
+      where,
+      limit,
+      offset,
+      attributes: ['gender_id', 'gender_name', 'sort_order'],
+    });
+
+    return genderTypes && genderTypes.map(genderType => genderType.get({ plain: true }));
+  } catch (error) {
+    console.error("Error fetching gender types:", error);
+    throw error;
+  }
+}
 
 /**
  * Retrieves user details from the database based on the provided conditions and pagination settings.
@@ -567,4 +596,5 @@ module.exports = {
   updateTicket,
   deleteTicket,
   isPrivateCustomer,
+  getGenderTypes
 };
