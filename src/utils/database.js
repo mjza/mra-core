@@ -241,28 +241,58 @@ async function getUserDetails(where, pagination) {
       {
         model: MraUsers,
         as: 'user',
-        attributes: ['public_profile_picture_url']
+        attributes: ['public_profile_picture_url', 'email', 'display_name']
       }
     ],
     attributes: ['user_id', 'first_name', 'middle_name', 'last_name', 'gender_id', 'date_of_birth', 'private_profile_picture_url', 'creator', 'created_at', 'updator', 'updated_at'],
   });
 
-  //return userDetails && userDetails.map(user => user.get({ plain: true }));
+  if (userDetails.length > 0) {
+    return userDetails.map(userDetail => {
+      const userDetailPlain = userDetail.get({ plain: true });
+      if (userDetailPlain.user) {
+        userDetailPlain.profile_picture_url = userDetailPlain.user.public_profile_picture_url;
+        userDetailPlain.email = userDetailPlain.user.email;
+        userDetailPlain.display_name = userDetailPlain.user.display_name;
+        delete userDetailPlain.user;
+      }
+      if (userDetailPlain.profile_picture_url !== null) {
+        userDetailPlain.is_private_picture = false;
+      } else {
+        userDetailPlain.profile_picture_url = userDetailPlain.private_profile_picture_url;
+        userDetailPlain.is_private_picture = !!userDetailPlain.profile_picture_url;
+        delete userDetailPlain.private_profile_picture_url;
+      }
+      return userDetailPlain;
+    });
+  }
 
-  return userDetails && userDetails.map(userDetail => {
-    const userDetailPlain = userDetail.get({ plain: true });
-    userDetailPlain.profile_picture_url = userDetailPlain.user ? userDetailPlain.user.public_profile_picture_url : null;
-    delete userDetailPlain.user;
-    if (userDetailPlain.profile_picture_url !== null) {
-      userDetailPlain.is_private_picture = false;
-    } else {
-      userDetailPlain.profile_picture_url = userDetailPlain.private_profile_picture_url;
-      userDetailPlain.is_private_picture = !!userDetailPlain.profile_picture_url;
-      delete userDetailPlain.private_profile_picture_url;
+  if(where && where.user_id) {
+    const user = await MraUsers.findOne({
+      where: { user_id: where.user_id},
+      attributes: ['user_id', 'public_profile_picture_url', 'email', 'display_name'],
+    });
+    const userPlain = user && user.get({ plain: true });
+    if (userPlain) {
+      userPlain.profile_picture_url = userPlain.public_profile_picture_url;
+      userPlain.is_private_picture = false;
+      delete userPlain.public_profile_picture_url;
+      return [{
+        ...userPlain,
+        first_name: null,
+        middle_name: null,
+        last_name: null,
+        gender_id: null,
+        date_of_birth: null,
+        creator: null,
+        created_at: null,
+        updator: null,
+        updated_at: null
+      }];
     }
-    return userDetailPlain;
-  });
+  }
 
+  return null;
 }
 
 /**
@@ -275,7 +305,7 @@ async function getUserDetails(where, pagination) {
  * @returns {Promise<Object>} The updated userDetails object.
  * @throws {Error} If the user's profile picture URL could not be stored publicly.
  */
-async function storeUserPublicProfileUrl(userDetails, where) {
+async function storeUserPublicInformation(userDetails, where) {
   let public_profile_picture_url;
   if (userDetails.is_private_picture === true) {
     public_profile_picture_url = null;
@@ -290,6 +320,8 @@ async function storeUserPublicProfileUrl(userDetails, where) {
   }
   const [updateCount] = await MraUsers.update(
     {
+      email: userDetails.email,
+      display_name: userDetails.display_name,
       public_profile_picture_url,
       updator: userDetails.updator || userDetails.creator,
     },
@@ -304,6 +336,8 @@ async function storeUserPublicProfileUrl(userDetails, where) {
   if (updateCount < 0) {
     throw new Error('Couldn\'t store user\'s profile picture url publically.');
   }
+  delete userDetails.email;
+  delete userDetails.display_name;
   return userDetails;
 }
 
@@ -315,7 +349,7 @@ async function storeUserPublicProfileUrl(userDetails, where) {
  */
 async function createUserDetails(userDetails) {
 
-  userDetails = await storeUserPublicProfileUrl(userDetails);
+  userDetails = await storeUserPublicInformation(userDetails);
   const createdRow = await MraUserDetails.create(userDetails);
 
   if (createdRow && createdRow.user_id) {
@@ -334,7 +368,7 @@ async function createUserDetails(userDetails) {
  * @returns {Object} The updated user details object.
  */
 async function updateUserDetails(where, userDetails) {
-  userDetails = await storeUserPublicProfileUrl(userDetails, where);
+  userDetails = await storeUserPublicInformation(userDetails, where);
   const [affectedRowCount] = await MraUserDetails.update(userDetails, { where });
 
   if (affectedRowCount > 0) {

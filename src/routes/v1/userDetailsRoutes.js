@@ -29,30 +29,6 @@ const secretProperties = [
 /**
  * @swagger
  * components:
- *   requests:
- *     UserDetailsBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               firstName:
- *                 type: string
- *               middleName:
- *                 type: string
- *               lastName:
- *                 type: string
- *               genderId:
- *                 type: integer
- *               dateOfBirth:
- *                 type: string
- *                 format: date
- *               profilePictureUrl:
- *                 type: string
- *               isPrivatePicture:
- *                 type: boolean
- *                 example: false
  *   responses:
  *     UserDetailsObject:
  *       type: object
@@ -64,6 +40,10 @@ const secretProperties = [
  *         middleName:
  *           type: string
  *         lastName:
+ *           type: string
+ *         displayName:
+ *           type: string
+ *         email:
  *           type: string
  *         genderId:
  *           type: integer
@@ -247,6 +227,13 @@ router.get('/user_details', apiRequestLimiter,
  *               lastName:
  *                 type: string
  *                 example: "Doh"
+ *               displayName:
+ *                 type: string
+ *                 example: "Doh"
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: "a@b.com"
  *               genderId:
  *                 type: integer
  *                 example: 1 
@@ -329,33 +316,46 @@ router.post('/user_details', apiRequestLimiter,
       .withMessage('User ID must be an integer greater than 0.'),
 
     body('firstName')
-      .optional()
+      .optional({ nullable: true })
       .isString()
       .withMessage('First name must be a string.')
       .isLength({ max: 255 })
       .withMessage('First name must not exceed 255 characters.'),
 
     body('middleName')
-      .optional()
+      .optional({ nullable: true })
       .isString()
       .withMessage('Middle name must be a string.')
       .isLength({ max: 255 })
       .withMessage('Middle name must not exceed 255 characters.'),
 
     body('lastName')
-      .optional()
+      .optional({ nullable: true })
       .isString()
       .withMessage('Last name must be a string.')
       .isLength({ max: 255 })
       .withMessage('Last name must not exceed 255 characters.'),
 
+    body('displayName')
+      .optional({ nullable: true })
+      .isString()
+      .withMessage('Display name must be a string.')
+      .isLength({ max: 255 })
+      .withMessage('Display name must not exceed 255 characters.'),
+
+    body('email')
+      .isEmail()
+      .withMessage('Invalid email address.')
+      .isLength({ min: 5, max: 255 })
+      .withMessage('Email must be between 5 and 255 characters.'),
+
     body('genderId')
-      .optional()
-      .isInt({ min: 1, max: 10 })
-      .withMessage('Gender ID must be an integer between 1 and 10, inclusive.'),
+      .optional({ nullable: true })
+      .isInt({ min: 0, max: 9 })
+      .withMessage('Gender ID must be an integer between 0 and 9, inclusive.'),
 
     body('dateOfBirth')
-      .optional()
+      .optional({ nullable: true })
       .matches(/^\d{4}-\d{2}-\d{2}$/, 'i')
       .withMessage('Date of birth must be in YYYY-MM-DD format.')
       .custom(value => {
@@ -364,7 +364,7 @@ router.post('/user_details', apiRequestLimiter,
       .withMessage('Date of birth must be a valid date.'),
 
     body('profilePictureUrl')
-      .optional()
+      .optional({ nullable: true })
       .isString()
       .withMessage('Private profile picture URL must be a string.')
       .isURL()
@@ -373,7 +373,7 @@ router.post('/user_details', apiRequestLimiter,
       .withMessage('Private profile picture URL must not exceed 255 characters.'),
 
     body('isPrivatePicture')
-      .optional()
+      .optional({ nullable: true })
       .isBoolean()
       .withMessage('isPrivatePicture must be a boolean.'),
   ],
@@ -453,6 +453,13 @@ router.post('/user_details', apiRequestLimiter,
  *               lastName:
  *                 type: string
  *                 example: "Doh"
+ *               displayName:
+ *                 type: string
+ *                 example: "Doh"
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: "a@b.com"
  *               genderId:
  *                 type: integer
  *                 example: 2 
@@ -531,33 +538,46 @@ router.put('/user_details/:userId', apiRequestLimiter,
       .withMessage('UserId must be a number.'),
 
     body('firstName')
-      .optional()
+      .optional({ nullable: true })
       .isString()
       .withMessage('First name must be a string.')
       .isLength({ max: 255 })
       .withMessage('First name must not exceed 255 characters.'),
 
     body('middleName')
-      .optional()
+      .optional({ nullable: true })
       .isString()
       .withMessage('Middle name must be a string.')
       .isLength({ max: 255 })
       .withMessage('Middle name must not exceed 255 characters.'),
 
     body('lastName')
-      .optional()
+      .optional({ nullable: true })
       .isString()
       .withMessage('Last name must be a string.')
       .isLength({ max: 255 })
       .withMessage('Last name must not exceed 255 characters.'),
 
+    body('displayName')
+      .optional({ nullable: true })
+      .isString()
+      .withMessage('Display name must be a string.')
+      .isLength({ max: 255 })
+      .withMessage('Display name must not exceed 255 characters.'),
+
+    body('email')
+      .isEmail()
+      .withMessage('Invalid email address.')
+      .isLength({ min: 5, max: 255 })
+      .withMessage('Email must be between 5 and 255 characters.'),  
+
     body('genderId')
-      .optional()
-      .isInt({ min: 1, max: 10 })
-      .withMessage('Gender ID must be an integer between 1 and 10, inclusive.'),
+      .optional({ nullable: true })
+      .isInt({ min: 0, max: 9 })
+      .withMessage('Gender ID must be an integer between 0 and 9, inclusive.'),
 
     body('dateOfBirth')
-      .optional()
+      .optional({ nullable: true })
       .matches(/^\d{4}-\d{2}-\d{2}$/, 'i')
       .withMessage('Date of birth must be in YYYY-MM-DD format.')
       .custom(value => {
@@ -566,7 +586,7 @@ router.put('/user_details/:userId', apiRequestLimiter,
       .withMessage('Date of birth must be a valid date.'),
 
     body('profilePictureUrl')
-      .optional()
+      .optional({ nullable: true })
       .isString()
       .withMessage('Private profile picture URL must be a string.')
       .isURL()
@@ -575,7 +595,7 @@ router.put('/user_details/:userId', apiRequestLimiter,
       .withMessage('Private profile picture URL must not exceed 255 characters.'),
 
     body('isPrivatePicture')
-      .optional()
+      .optional({ nullable: true })
       .isBoolean()
       .withMessage('isPrivatePicture must be a boolean.'),
   ],
