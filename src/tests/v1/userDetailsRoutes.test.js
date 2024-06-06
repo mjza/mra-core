@@ -31,6 +31,8 @@ describe('/user_details endpoints', () => {
             firstName: 'string1',
             middleName: 'string2',
             lastName: 'string3',
+            displayName: testUser.username,
+            email: testUser.email,
             genderId: 1,
             dateOfBirth: '2023-12-07',
             profilePictureUrl: 'http://example.com/123',
@@ -45,10 +47,29 @@ describe('/user_details endpoints', () => {
     });
 
     describe('GET /user_details before creation', () => {
-        it('should return 404 as user details has not yet defined', async () => {
+        it('should return a user details with no creator as it has not yet defined', async () => {
             const res = await request(app).get('/v1/user_details').set('Authorization', `Bearer ${authData.token}`);
-            expect(res.statusCode).toEqual(404);
-            expect(res.body.message).toEqual('User details not found');
+            expect(res.statusCode).toEqual(200);
+            expect(res.body).not.toBeNull();
+            expect(Array.isArray(res.body.data)).toBeTruthy();
+            expect(res.body.data.length).toBe(1);
+            expect(res.body.hasMore).toBeFalsy();
+            const item = res.body.data[0];
+            expect(item.userId).toBe(userDetails.userId);
+            expect(item.email).toBe(userDetails.email);
+            //expect(item.displayName).toBe(userDetails.displayName);
+            expect(item.firstName).toBeNull();
+            expect(item.middleName).toBeNull();
+            expect(item.lastName).toBeNull();
+            expect(item.genderId).toBeNull();
+            expect(item.gender).not.toBeDefined();
+            expect(item.dateOfBirth).toBeNull();
+            expect(item.profilePictureUrl).toBeNull();
+            expect(item.isPrivatePicture).toBeFalsy();
+            expect(item.creator).toBeNull();
+            expect(item.createdAt).toBeNull();
+            expect(item.updator).toBeNull();
+            expect(item.updatedAt).toBeNull();
         });
     });
 
@@ -229,7 +250,7 @@ describe('/user_details endpoints', () => {
             const res = await request(app).put(`/v1/user_details/${userDetails.userId}`).send(copy).set('Authorization', `Bearer ${authData.token}`);
 
             expect(res.statusCode).toEqual(400);
-            expect(res.body.errors[0].msg).toEqual('Gender ID must be an integer between 1 and 10, inclusive.');
+            expect(res.body.errors[0].msg).toEqual('Gender ID must be an integer between 0 and 9, inclusive.');
         });
 
 

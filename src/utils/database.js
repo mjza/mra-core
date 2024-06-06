@@ -268,11 +268,14 @@ async function getUserDetails(where, pagination) {
   }
 
   if(where && where.user_id) {
+    
     const user = await MraUsers.findOne({
       where: { user_id: where.user_id},
       attributes: ['user_id', 'public_profile_picture_url', 'email', 'display_name'],
     });
+        
     const userPlain = user && user.get({ plain: true });
+
     if (userPlain) {
       userPlain.profile_picture_url = userPlain.public_profile_picture_url;
       userPlain.is_private_picture = false;
