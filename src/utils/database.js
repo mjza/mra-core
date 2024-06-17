@@ -1,4 +1,4 @@
-const { Sequelize, closeSequelize, MraUsers, MraAuditLogsCore, MraGenderTypes, MraUserDetails, MraTickets, MraCustomers, MraTicketCategories, MragCountries, MragCities, } = require('../models');
+const { Sequelize, sequelize, closeSequelize, MraUsers, MraAuditLogsCore, MraGenderTypes, MraUserDetails, MraTickets, MraCustomers, MraTicketCategories, MragCountries, MragCities, } = require('../models');
 const { Op } = Sequelize;
 /**
  * Closes the database connection pool.
@@ -613,6 +613,37 @@ const isPrivateCustomer = async (customerId) => {
   return customer ? customer.is_private : false;
 };
 
+/**
+ * Finds ticket categories similar to a given title and within a specified boundary or customer ID.
+ *
+ * @param {string} ticketTitle - The title of the ticket to search for similar categories.
+ * @param {number} latitude - The latitude of the user's location.
+ * @param {number} longitude - The longitude of the user's location.
+ * @param {number} customerId - The ID of the customer to filter categories.
+ * @returns {Promise<Array>} A promise that resolves to an array of similar ticket categories.
+ */
+async function getTicketCategories(ticketTitle, latitude, longitude, customerId) {
+  const query = `
+      SELECT ticket_category_id, ticket_category_name, description, 
+             ts_rank_cd(search_vector, mra_function_construct_tsquery(replace(:ticketTitle, ' ', ' | '))) AS rank
+      FROM mra_ticket_categories
+      WHERE search_vector @@ mra_function_construct_tsquery(replace(:ticketTitle, ' ', ' | '))
+        AND 
+        (
+          ST_Contains(boundary, ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326))
+        OR
+          customer_id = :customerId
+        )
+      ORDER BY rank DESC;
+  `;
+
+  const results = await sequelize.query(query, {
+      replacements: { ticketTitle, latitude, longitude, customerId },
+      type: Sequelize.QueryTypes.SELECT
+  });
+
+  return results;
+}
 
 module.exports = {
   closeDBConnections,
@@ -633,5 +664,6 @@ module.exports = {
   updateTicket,
   deleteTicket,
   isPrivateCustomer,
-  getGenderTypes
+  getGenderTypes,
+  getTicketCategories
 };

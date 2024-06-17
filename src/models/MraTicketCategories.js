@@ -14,6 +14,15 @@ module.exports = function(sequelize, DataTypes) {
 						comment: "Name of the ticket category.",
 						unique: "mra_ticket_categories_uc_category"
 				},
+				description: {
+						type: DataTypes.TEXT,
+						allowNull: true,
+						comment: "Description of the ticket category, detailing its purpose and scope."
+				},
+				search_vector: {
+						type: "TSVECTOR",
+						allowNull: true
+				},
 				parent_category_id: {
 						type: DataTypes.INTEGER,
 						allowNull: true,
@@ -22,11 +31,6 @@ module.exports = function(sequelize, DataTypes) {
 								model: 'mra_ticket_categories',
 								key: 'ticket_category_id'
 						}
-				},
-				description: {
-						type: DataTypes.TEXT,
-						allowNull: true,
-						comment: "Description of the ticket category, detailing its purpose and scope."
 				},
 				customer_type_id: {
 						type: DataTypes.INTEGER,
@@ -56,6 +60,11 @@ module.exports = function(sequelize, DataTypes) {
 								model: 'mra_ticket_categories',
 								key: 'ticket_category_id'
 						}
+				},
+				boundary: {
+						type: DataTypes.GEOMETRY('GEOMETRY', 4326),
+						allowNull: true,
+						comment: "The geospatial data that tells the area that a type covers."
 				},
 				is_active: {
 						type: DataTypes.BOOLEAN,
