@@ -622,28 +622,79 @@ const isPrivateCustomer = async (customerId) => {
  * @param {number} customerId - The ID of the customer to filter categories.
  * @returns {Promise<Array>} A promise that resolves to an array of similar ticket categories.
  */
-async function getTicketCategories(ticketTitle, latitude, longitude, customerId) {
+async function getTicketCategories(ticketTitle, latitude, longitude, customerId, pagination) {
+  const { limit, offset } = pagination;
+  const geoCondition = latitude && longitude ? `ST_Contains(boundary, ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326))` : 'true';
+  const customerCondition = customerId ? `customer_id = :customerId` : 'true';
+  
+  const ticketTitleCondition = ticketTitle && ticketTitle.trim() ? 
+    `search_vector @@ mra_function_construct_tsquery(:ticketTitle)` : 'true';
+  const ilikeCondition = ticketTitle && ticketTitle.trim() ? 
+    `ticket_category_name ILIKE '%' || :ticketTitle || '%'` : 'true';
+  
+  const rankCalculation = ticketTitle && ticketTitle.trim() ? 
+    `ts_rank_cd(search_vector, mra_function_construct_tsquery(:ticketTitle)) AS rank` : 'NULL AS rank';
+
   const query = `
-      SELECT ticket_category_id, ticket_category_name, description, 
-             ts_rank_cd(search_vector, mra_function_construct_tsquery(replace(:ticketTitle, ' ', ' | '))) AS rank
-      FROM mra_ticket_categories
-      WHERE search_vector @@ mra_function_construct_tsquery(replace(:ticketTitle, ' ', ' | '))
-        AND 
-        (
-          ST_Contains(boundary, ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326))
-        OR
-          customer_id = :customerId
-        )
-      ORDER BY rank DESC;
+      SELECT ticket_category_id, ticket_category_name, description, rank FROM
+      (SELECT DISTINCT ON (ticket_category_id) ticket_category_id, ticket_category_name, description, rank
+      FROM (
+          (SELECT 
+              ticket_category_id, 
+              ticket_category_name, 
+              description, 
+              ${rankCalculation},
+              1 AS source_order
+          FROM mra_ticket_categories
+          WHERE 
+              ${ticketTitleCondition}
+              AND (
+                  ${geoCondition}
+                  AND ${customerCondition}
+              )
+          LIMIT :limit OFFSET :offset)        
+          UNION
+          (SELECT 
+              ticket_category_id, 
+              ticket_category_name, 
+              description, 
+              0 AS rank,
+              2 AS source_order
+          FROM mra_ticket_categories
+          WHERE 
+              ${ilikeCondition}
+              AND (
+                  ${geoCondition}
+                  AND ${customerCondition}
+              )
+          LIMIT :limit OFFSET :offset)        
+      ) AS combined_results
+      ORDER BY ticket_category_id, source_order
+      )
+      ORDER BY rank DESC
+      LIMIT :limit OFFSET :offset;
   `;
 
+  const replacements = { limit, offset };
+  if (ticketTitle && ticketTitle.trim()) {
+    replacements.ticketTitle = ticketTitle.trim();  // Trim the ticketTitle to ensure no leading/trailing spaces
+  }
+  if (latitude && longitude) {
+    replacements.latitude = latitude;
+    replacements.longitude = longitude;
+  }
+  if (customerId) {
+    replacements.customerId = customerId;
+  }
+
   const results = await sequelize.query(query, {
-      replacements: { ticketTitle, latitude, longitude, customerId },
-      type: Sequelize.QueryTypes.SELECT
+    replacements,
+    type: Sequelize.QueryTypes.SELECT
   });
 
   return results;
 }
+
 
 module.exports = {
   closeDBConnections,
