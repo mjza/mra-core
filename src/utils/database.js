@@ -489,6 +489,9 @@ const activateUser = async (user) => {
  * Retrieves ticket from the database based on the provided conditions.
  *
  * @param {object} where - The object containing `where` clauses to specify the search criteria.
+ * @param {object} pagination - The pagination settings containing 'limit' and 'offset'.
+ *                              'limit' defines the number of user details to fetch.
+ *                              'offset' specifies the number of user details to skip.
  * @returns {Object[]} An array of ticket objects.
  */
 async function getTickets(where, pagination, order = [['created_at', 'DESC']]) {
@@ -620,6 +623,9 @@ const isPrivateCustomer = async (customerId) => {
  * @param {number} latitude - The latitude of the user's location.
  * @param {number} longitude - The longitude of the user's location.
  * @param {number} customerId - The ID of the customer to filter categories.
+ * @param {object} pagination - The pagination settings containing 'limit' and 'offset'.
+ *                              'limit' defines the number of user details to fetch.
+ *                              'offset' specifies the number of user details to skip.
  * @returns {Promise<Array>} A promise that resolves to an array of similar ticket categories.
  */
 async function getTicketCategories(ticketTitle, latitude, longitude, customerId, pagination) {
@@ -628,51 +634,29 @@ async function getTicketCategories(ticketTitle, latitude, longitude, customerId,
   const customerCondition = customerId ? `customer_id = :customerId` : 'true';
   
   const ticketTitleCondition = ticketTitle && ticketTitle.trim() ? 
-    `search_vector @@ mra_function_construct_tsquery(:ticketTitle)` : 'true';
-  const ilikeCondition = ticketTitle && ticketTitle.trim() ? 
-    `ticket_category_name ILIKE '%' || :ticketTitle || '%'` : 'true';
+    `(ticket_category_name ILIKE '%' || :ticketTitle || '%' OR description ILIKE '%' || :ticketTitle || '%')` : 'true';
   
   const rankCalculation = ticketTitle && ticketTitle.trim() ? 
-    `ts_rank_cd(search_vector, mra_function_construct_tsquery(:ticketTitle)) AS rank` : 'NULL AS rank';
+    `GREATEST(similarity(ticket_category_name, :ticketTitle), similarity(description, :ticketTitle)) AS rank` : '1 AS rank';
 
   const query = `
-      SELECT ticket_category_id, ticket_category_name, description, rank FROM
-      (SELECT DISTINCT ON (ticket_category_id) ticket_category_id, ticket_category_name, description, rank
-      FROM (
-          (SELECT 
-              ticket_category_id, 
-              ticket_category_name, 
-              description, 
-              ${rankCalculation},
-              1 AS source_order
-          FROM mra_ticket_categories
-          WHERE 
-              ${ticketTitleCondition}
-              AND (
-                  ${geoCondition}
-                  AND ${customerCondition}
-              )
-          LIMIT :limit OFFSET :offset)        
-          UNION
-          (SELECT 
-              ticket_category_id, 
-              ticket_category_name, 
-              description, 
-              0 AS rank,
-              2 AS source_order
-          FROM mra_ticket_categories
-          WHERE 
-              ${ilikeCondition}
-              AND (
-                  ${geoCondition}
-                  AND ${customerCondition}
-              )
-          LIMIT :limit OFFSET :offset)        
-      ) AS combined_results
-      ORDER BY ticket_category_id, source_order
+    SELECT 
+      ticket_category_id, 
+      ticket_category_name, 
+      description,
+      ${rankCalculation}
+    FROM 
+      mra_ticket_categories
+    WHERE 
+      ${ticketTitleCondition}
+      AND 
+      (
+        ${geoCondition}
+        AND 
+        ${customerCondition}
       )
-      ORDER BY rank DESC
-      LIMIT :limit OFFSET :offset;
+    ORDER BY rank DESC
+    LIMIT :limit OFFSET :offset;
   `;
 
   const replacements = { limit, offset };
