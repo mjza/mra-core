@@ -19,10 +19,6 @@ module.exports = function(sequelize, DataTypes) {
 						allowNull: true,
 						comment: "Description of the ticket category, detailing its purpose and scope."
 				},
-				search_vector: {
-						type: "TSVECTOR",
-						allowNull: true
-				},
 				parent_category_id: {
 						type: DataTypes.INTEGER,
 						allowNull: true,
@@ -120,6 +116,18 @@ module.exports = function(sequelize, DataTypes) {
 										{ name: "ticket_category_name" },
 										{ name: "customer_type_id" },
 										{ name: "customer_id" },
+								]
+						},
+						{
+								name: "mra_trgm_description_idx",
+								fields: [
+										{ name: "description" },
+								]
+						},
+						{
+								name: "mra_trgm_ticket_category_name_idx",
+								fields: [
+										{ name: "ticket_category_name" },
 								]
 						},
 				]
