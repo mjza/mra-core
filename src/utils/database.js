@@ -267,13 +267,13 @@ async function getUserDetails(where, pagination) {
     });
   }
 
-  if(where && where.user_id) {
-    
+  if (where && where.user_id) {
+
     const user = await MraUsers.findOne({
-      where: { user_id: where.user_id},
+      where: { user_id: where.user_id },
       attributes: ['user_id', 'public_profile_picture_url', 'email', 'display_name'],
     });
-        
+
     const userPlain = user && user.get({ plain: true });
 
     if (userPlain) {
@@ -632,11 +632,11 @@ async function getTicketCategories(ticketTitle, latitude, longitude, customerId,
   const { limit, offset } = pagination;
   const geoCondition = latitude && longitude ? `ST_Contains(boundary, ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326))` : 'true';
   const customerCondition = customerId ? `customer_id = :customerId` : 'true';
-  
-  const ticketTitleCondition = ticketTitle && ticketTitle.trim() ? 
+
+  const ticketTitleCondition = ticketTitle && ticketTitle.trim() ?
     `(ticket_category_name ILIKE '%' || :ticketTitle || '%' OR description ILIKE '%' || :ticketTitle || '%')` : 'true';
-  
-  const rankCalculation = ticketTitle && ticketTitle.trim() ? 
+
+  const rankCalculation = ticketTitle && ticketTitle.trim() ?
     `GREATEST(similarity(ticket_category_name, :ticketTitle), similarity(description, :ticketTitle)) AS rank` : '1 AS rank';
 
   const query = `
@@ -679,6 +679,48 @@ async function getTicketCategories(ticketTitle, latitude, longitude, customerId,
   return results;
 }
 
+// Address constructor function
+class Address {
+  constructor(data) {
+    this.id = data.id;
+    this.geo_latitude = data.geo_latitude;
+    this.geo_longitude = data.geo_longitude;
+    this.geo_location = data.geo_location;
+    this.street_name = data.street_name;
+    this.street_type = data.street_type;
+    this.street_quad = data.street_quad;
+    this.street_full_name = data.street_full_name;
+    this.street_no = data.street_no;
+    this.house_number = data.house_number;
+    this.house_alpha = data.house_alpha;
+    this.unit = data.unit;
+    this.city = data.city;
+    this.region = data.region;
+    this.postal_code = data.postal_code;
+    this.full_address = data.full_address;
+  }
+}
+
+// Function to call the stored procedure with dynamic parameters
+async function getAddressData(longitude, latitude) {
+  try {
+      const results = await sequelize.query(
+          `SELECT * FROM mra_function_get_address_data_rs(:longitude, :latitude)`,
+          {
+              replacements: { longitude, latitude },
+              type: Sequelize.QueryTypes.SELECT
+          }
+      );
+
+      // Map the results to Address instances
+      const addresses = results.map(result => new Address(result));
+
+      return addresses;
+  } catch (error) {
+      console.error('Error executing function:', error);
+      throw error;
+  }
+}
 
 module.exports = {
   closeDBConnections,
@@ -700,5 +742,6 @@ module.exports = {
   deleteTicket,
   isPrivateCustomer,
   getGenderTypes,
-  getTicketCategories
+  getTicketCategories,
+  getAddressData
 };
