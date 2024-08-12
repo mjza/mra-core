@@ -42,6 +42,7 @@ heroku config:set DOC_USER=modir --app mra-core
 heroku config:set NODE_ENV=production --app mra-core
 heroku config:set PORT=443 --app mra-core
 heroku config:set TZ=UTC --app mra-core
+heroku config:set ACTIVATE_SWAGGER=true --app mra-core
 ```
 
 Then run run the above commands in the Heroku CLI or go to the `mra-core` application, then in the `Settings` tab press on the `Reveal Config Vars` button and edit them directly. Like the following picture:
