@@ -623,15 +623,17 @@ const isPrivateCustomer = async (customerId) => {
  * @param {number} latitude - The latitude of the user's location.
  * @param {number} longitude - The longitude of the user's location.
  * @param {number} customerId - The ID of the customer to filter categories.
+ * @param {number} customerTypeId - The ID of the customer type to filter categories.
  * @param {object} pagination - The pagination settings containing 'limit' and 'offset'.
  *                              'limit' defines the number of user details to fetch.
  *                              'offset' specifies the number of user details to skip.
  * @returns {Promise<Array>} A promise that resolves to an array of similar ticket categories.
  */
-async function getTicketCategories(ticketTitle, latitude, longitude, customerId, pagination) {
+async function getTicketCategories(ticketTitle, latitude, longitude, customerId, customerTypeId, pagination) {
   const { limit, offset } = pagination;
   const geoCondition = latitude && longitude ? `ST_Contains(boundary, ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326))` : 'true';
   const customerCondition = customerId ? `customer_id = :customerId` : 'true';
+  const customerTypeCondition = !customerId && customerTypeId ? `customer_type_id = :customerTypeId` : 'true';
 
   const ticketTitleCondition = ticketTitle && ticketTitle.trim() ?
     `(ticket_category_name ILIKE '%' || :ticketTitle || '%' OR description ILIKE '%' || :ticketTitle || '%')` : 'true';
@@ -644,6 +646,16 @@ async function getTicketCategories(ticketTitle, latitude, longitude, customerId,
       ticket_category_id, 
       ticket_category_name, 
       description,
+      parent_category_id, 
+      customer_type_id, 
+      customer_id, 
+      source_id, 
+      boundary, 
+      is_active, 
+      creator, 
+      created_at, 
+      updator, 
+      updated_at,
       ${rankCalculation}
     FROM 
       mra_ticket_categories
@@ -652,8 +664,10 @@ async function getTicketCategories(ticketTitle, latitude, longitude, customerId,
       AND 
       (
         ${geoCondition}
-        AND 
+        AND
         ${customerCondition}
+        AND 
+        ${customerTypeCondition}
       )
     ORDER BY rank DESC
     LIMIT :limit OFFSET :offset;
@@ -669,6 +683,9 @@ async function getTicketCategories(ticketTitle, latitude, longitude, customerId,
   }
   if (customerId) {
     replacements.customerId = customerId;
+  }
+  if (!customerId && customerTypeId) {
+    replacements.customerTypeId = customerTypeId;
   }
 
   const results = await sequelize.query(query, {

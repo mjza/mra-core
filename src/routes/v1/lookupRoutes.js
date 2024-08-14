@@ -1,9 +1,9 @@
 const express = require('express');
 const { query } = require('express-validator');
 const db = require('../../utils/database');
-const { checkRequestValidity } = require('../../utils/validations');
 const { apiRequestLimiter } = require('../../utils/rateLimit');
 const { toLowerCamelCase } = require('../../utils/converters');
+const { authorizeUser, checkRequestValidity } = require('../../utils/validations');
 
 const router = express.Router();
 
@@ -123,6 +123,8 @@ router.get('/gender_types', apiRequestLimiter,
  *     summary: Retrieve ticket categories
  *     description: Get the list of ticket categories with optional pagination and search filters.
  *     tags: [1st]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: ticketTitle
@@ -147,7 +149,13 @@ router.get('/gender_types', apiRequestLimiter,
  *         required: false
  *         schema:
  *           type: integer
- *         description: Customer ID for filtering ticket categories.
+ *         description: Customer ID for filtering ticket categories. If it is set, then the customerTypeId will be ignored.
+ *       - in: query
+ *         name: customerTypeId
+ *         required: false
+ *         schema:
+ *           type: integer
+ *         description: Customer Type ID for filtering ticket categories.
  *       - in: query
  *         name: page
  *         required: false
@@ -226,6 +234,11 @@ router.get('/ticket_categories', apiRequestLimiter,
       .isNumeric().withMessage('Customer ID must be a number')
       .toInt(),
 
+    query('customerTypeId')
+      .optional({ checkFalsy: true })
+      .isNumeric().withMessage('Customer Type ID must be a number')
+      .toInt(),  
+
     query('page')
       .optional({ checkFalsy: true })
       .isNumeric().withMessage('Page must be a number')
@@ -246,10 +259,18 @@ router.get('/ticket_categories', apiRequestLimiter,
     };
     next();
   },
+  async (req, res, next) => {
+    let where = {};
+    const customerId = req.query.customerId;
+    const isPrivateCustomer = await db.isPrivateCustomer(customerId);
+    const domain = isPrivateCustomer ? String(customerId) : '0';
+    const middleware = authorizeUser({ dom: domain, obj: 'mra_ticket_categories', act: 'R', attrs: { where } });
+    middleware(req, res, next);
+  },
   async (req, res) => {
     try {
-      const { ticketTitle, latitude, longitude, customerId } = req.query;
-      const ticketCategoriesArray = await db.getTicketCategories(ticketTitle, latitude, longitude, customerId, req.pagination);
+      const { ticketTitle, latitude, longitude, customerId, customerTypeId } = req.query;
+      const ticketCategoriesArray = await db.getTicketCategories(ticketTitle, latitude, longitude, customerId, customerTypeId, req.pagination);
 
       if (!ticketCategoriesArray || ticketCategoriesArray.length === 0) {
         return res.status(404).json({ message: 'Ticket categories not found' });
