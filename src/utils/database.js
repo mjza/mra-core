@@ -632,8 +632,8 @@ const isPrivateCustomer = async (customerId) => {
 async function getTicketCategories(ticketTitle, latitude, longitude, customerId, customerTypeId, pagination) {
   const { limit, offset } = pagination;
   const geoCondition = latitude && longitude ? `ST_Contains(boundary, ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326))` : 'true';
-  const customerCondition = customerId ? `customer_id = :customerId` : 'customer_id IS NULL';
-  const customerTypeCondition = !customerId && customerTypeId ? `customer_type_id = :customerTypeId` : 'true';
+  const customerCondition = customerId ? `customer_id = :customerId` : 'true';
+  const customerTypeCondition = customerTypeId ? `customer_type_id = :customerTypeId` : 'true';
 
   // Tokenize the ticket title by splitting it into individual words
   const tokens = ticketTitle ? ticketTitle.trim().split(/\s+/) : [];
@@ -677,9 +677,11 @@ async function getTicketCategories(ticketTitle, latitude, longitude, customerId,
       (
         ${geoCondition}
         AND
-        ${customerCondition}
-        AND 
-        ${customerTypeCondition}
+        (
+          ${customerCondition}
+          OR 
+          ${customerTypeCondition}
+        )
       )
     ORDER BY rank DESC
     LIMIT :limit OFFSET :offset;
@@ -698,7 +700,7 @@ async function getTicketCategories(ticketTitle, latitude, longitude, customerId,
   if (customerId) {
     replacements.customerId = customerId;
   }
-  if (!customerId && customerTypeId) {
+  if (customerTypeId) {
     replacements.customerTypeId = customerTypeId;
   }
 
