@@ -631,9 +631,9 @@ const isPrivateCustomer = async (customerId) => {
  */
 async function getTicketCategories(ticketTitle, latitude, longitude, customerId, customerTypeId, pagination) {
   const { limit, offset } = pagination;
-  const geoCondition = latitude && longitude ? `ST_Contains(boundary, ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326))` : 'true';
-  const customerCondition = customerId ? `customer_id = :customerId` : 'true';
-  const customerTypeCondition = customerTypeId ? `customer_type_id = :customerTypeId` : 'true';
+  const geoCondition = latitude && longitude ? `ST_Contains(tc.boundary, ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326))` : 'true';
+  const customerCondition = customerId ? `tc.customer_id = :customerId` : 'true';
+  const customerTypeCondition = customerTypeId ? `tc.customer_type_id = :customerTypeId` : 'true';
 
   // Tokenize the ticket title by splitting it into individual words
   const tokens = ticketTitle ? ticketTitle.trim().split(/\s+/) : [];
@@ -644,33 +644,42 @@ async function getTicketCategories(ticketTitle, latitude, longitude, customerId,
 
   if (tokens.length > 0) {
     const similarityConditions = tokens.map((token, index) => `
-      (ticket_category_name ILIKE '%' || :token${index} || '%' OR description ILIKE '%' || :token${index} || '%')`);
+      (tc.ticket_category_name ILIKE '%' || :token${index} || '%' OR tc.description ILIKE '%' || :token${index} || '%')`);
 
     const rankCalculations = tokens.map((token, index) => `
-      (similarity(ticket_category_name, :token${index}) + similarity(description, :token${index}))`);
+      (similarity(tc.ticket_category_name, :token${index}) + similarity(tc.description, :token${index}))`);
 
     ticketTitleCondition = `(${similarityConditions.join(' OR ')})`;
     rankCalculation = `${rankCalculations.join(' + ')} AS rank`;
   }
 
+  // Build the JOIN and additional WHERE conditions
+  let joinClause = '';
+  let additionalCondition = 'true';
+  if (!customerId) {
+    joinClause = `LEFT JOIN mra_customers c ON c.customer_id = tc.customer_id`;
+    additionalCondition = `COALESCE(c.is_private, false) = false`;
+  }
+
   const query = `
     SELECT 
-      ticket_category_id, 
-      ticket_category_name, 
-      description,
-      parent_category_id, 
-      customer_type_id, 
-      customer_id, 
-      source_id, 
-      boundary, 
-      is_active, 
-      creator, 
-      created_at, 
-      updator, 
-      updated_at,
+      tc.ticket_category_id, 
+      tc.ticket_category_name, 
+      tc.description,
+      tc.parent_category_id, 
+      tc.customer_type_id, 
+      tc.customer_id, 
+      tc.source_id, 
+      tc.boundary, 
+      tc.is_active, 
+      tc.creator, 
+      tc.created_at, 
+      tc.updator, 
+      tc.updated_at,
       ${rankCalculation}
     FROM 
-      mra_ticket_categories
+      mra_ticket_categories tc
+    ${joinClause}
     WHERE 
       ${ticketTitleCondition}
       AND 
@@ -683,6 +692,8 @@ async function getTicketCategories(ticketTitle, latitude, longitude, customerId,
           ${customerTypeCondition}
         )
       )
+      AND
+      ${additionalCondition}
     ORDER BY rank DESC
     LIMIT :limit OFFSET :offset;
   `;
@@ -711,6 +722,7 @@ async function getTicketCategories(ticketTitle, latitude, longitude, customerId,
 
   return results;
 }
+
 
 // Address constructor function
 class Address {
