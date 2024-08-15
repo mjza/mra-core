@@ -149,13 +149,13 @@ router.get('/gender_types', apiRequestLimiter,
  *         required: false
  *         schema:
  *           type: integer
- *         description: Customer ID for filtering ticket categories. If it is set, then the customerTypeId will be ignored.
+ *         description: Customer ID for filtering ticket categories. If customer_id is set, customer_type_id is ignored, giving priority to the customer_id filter.
  *       - in: query
  *         name: customerTypeId
  *         required: false
  *         schema:
  *           type: integer
- *         description: Customer Type ID for filtering ticket categories.
+ *         description: Customer Type ID for filtering ticket categories. If customer_id is set, customer_type_id is ignored, giving priority to the customer_id filter.
  *       - in: query
  *         name: page
  *         required: false

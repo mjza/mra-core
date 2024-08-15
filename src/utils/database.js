@@ -632,14 +632,26 @@ const isPrivateCustomer = async (customerId) => {
 async function getTicketCategories(ticketTitle, latitude, longitude, customerId, customerTypeId, pagination) {
   const { limit, offset } = pagination;
   const geoCondition = latitude && longitude ? `ST_Contains(boundary, ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326))` : 'true';
-  const customerCondition = customerId ? `customer_id = :customerId` : 'true';
+  const customerCondition = customerId ? `customer_id = :customerId` : 'customer_id IS NULL';
   const customerTypeCondition = !customerId && customerTypeId ? `customer_type_id = :customerTypeId` : 'true';
 
-  const ticketTitleCondition = ticketTitle && ticketTitle.trim() ?
-    `(ticket_category_name ILIKE '%' || :ticketTitle || '%' OR description ILIKE '%' || :ticketTitle || '%')` : 'true';
+  // Tokenize the ticket title by splitting it into individual words
+  const tokens = ticketTitle ? ticketTitle.trim().split(/\s+/) : [];
 
-  const rankCalculation = ticketTitle && ticketTitle.trim() ?
-    `GREATEST(similarity(ticket_category_name, :ticketTitle), similarity(description, :ticketTitle)) AS rank` : '1 AS rank';
+  // Construct the similarity condition and rank calculation based on tokens
+  let ticketTitleCondition = 'true';
+  let rankCalculation = '1 AS rank';
+
+  if (tokens.length > 0) {
+    const similarityConditions = tokens.map((token, index) => `
+      (ticket_category_name ILIKE '%' || :token${index} || '%' OR description ILIKE '%' || :token${index} || '%')`);
+
+    const rankCalculations = tokens.map((token, index) => `
+      (similarity(ticket_category_name, :token${index}) + similarity(description, :token${index}))`);
+
+    ticketTitleCondition = `(${similarityConditions.join(' OR ')})`;
+    rankCalculation = `${rankCalculations.join(' + ')} AS rank`;
+  }
 
   const query = `
     SELECT 
@@ -673,10 +685,12 @@ async function getTicketCategories(ticketTitle, latitude, longitude, customerId,
     LIMIT :limit OFFSET :offset;
   `;
 
+  // Create replacements object for Sequelize query
   const replacements = { limit, offset };
-  if (ticketTitle && ticketTitle.trim()) {
-    replacements.ticketTitle = ticketTitle.trim();  // Trim the ticketTitle to ensure no leading/trailing spaces
-  }
+  tokens.forEach((token, index) => {
+    replacements[`token${index}`] = token;
+  });
+
   if (latitude && longitude) {
     replacements.latitude = latitude;
     replacements.longitude = longitude;
