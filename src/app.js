@@ -125,6 +125,7 @@ async function createApp() {
                 { name: '1st', description: 'Lookup Tables' },
                 { name: '2nd', description: 'User Details' },
                 { name: '3rd', description: 'Tickets' },
+                { name: '4th', description: 'Geo Related' },
             ],
         };
 

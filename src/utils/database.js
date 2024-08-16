@@ -723,9 +723,77 @@ async function getTicketCategories(ticketTitle, latitude, longitude, customerId,
   return results;
 }
 
+/**
+ * Retrieves country records from the MragCountries table with optional filtering and pagination.
+ *
+ * @async
+ * @function getCountries
+ * @param {Object} where - Additional conditions to filter the countries.
+ * @param {Object} pagination - Pagination details.
+ * @param {number} pagination.limit - The maximum number of records to return.
+ * @param {number} pagination.offset - The number of records to skip before starting to collect the result set.
+ * @returns {Promise<Array<Object>>} A promise that resolves to an array of countries.
+ * @throws {Error} If there is an error fetching countries from the database.
+ */
+async function getCountries(where = {}, pagination) {
+  const { limit, offset } = pagination;
+  try {
+    const countries = await MragCountries.findAll({
+      where: convertSequelizeOperators({
+        ...where,
+        is_valid: true,
+      }),
+      limit,
+      offset,
+      attributes: [
+        'country_id',
+        'country_name',
+        'iso_code',
+        'iso_long_code',
+        'dial_code',
+        'languages',
+        'is_supported',
+      ],
+    });
 
-// Address constructor function
+    return countries && countries.map(country => country.get({ plain: true }));
+  } catch (error) {
+    console.error("Error fetching countries:", error);
+    throw error;
+  }
+}
+
+/**
+ * Represents an Address with detailed information.
+ *
+ * The `Address` class encapsulates various details about an address, including geographic coordinates,
+ * street information, city, region, postal code, and the full formatted address.
+ *
+ * @class
+ */
 class Address {
+  /**
+   * Creates an instance of Address.
+   * 
+   * @constructor
+   * @param {Object} data - The data object containing address details.
+   * @param {number} data.id - The unique identifier of the address.
+   * @param {number} data.geo_latitude - The latitude coordinate of the address.
+   * @param {number} data.geo_longitude - The longitude coordinate of the address.
+   * @param {Object} data.geo_location - The geographic location of the address (geometry point).
+   * @param {string} [data.street_name] - The name of the street.
+   * @param {string} [data.street_type] - The type of the street (e.g., Ave, Blvd).
+   * @param {string} [data.street_quad] - The quadrant of the street (e.g., NW, SE).
+   * @param {string} [data.street_full_name] - The full name of the street.
+   * @param {string} [data.street_no] - The street number.
+   * @param {string} [data.house_number] - The house number.
+   * @param {string} [data.house_alpha] - The house alpha.
+   * @param {string} [data.unit] - The unit or apartment number.
+   * @param {string} [data.city] - The city in which the address is located.
+   * @param {string} [data.region] - The region or state in which the address is located.
+   * @param {string} [data.postal_code] - The postal code of the address.
+   * @param {string} [data.full_address] - The full formatted address.
+   */
   constructor(data) {
     this.id = data.id;
     this.geo_latitude = data.geo_latitude;
@@ -746,7 +814,19 @@ class Address {
   }
 }
 
-// Function to call the stored procedure with dynamic parameters
+/**
+ * Retrieves address data based on the provided geographic coordinates.
+ *
+ * This function executes a PostgreSQL function `mra_function_get_address_data_rs` to fetch address information 
+ * for the given longitude and latitude. The results are mapped to instances of the `Address` class.
+ *
+ * @async
+ * @function getAddressData
+ * @param {number} longitude - The longitude of the location.
+ * @param {number} latitude - The latitude of the location.
+ * @returns {Promise<Array<Address>>} A promise that resolves to an array of `Address` instances containing the address data.
+ * @throws {Error} If there is an error executing the database function.
+ */
 async function getAddressData(longitude, latitude) {
   try {
       const results = await sequelize.query(
@@ -766,6 +846,171 @@ async function getAddressData(longitude, latitude) {
       throw error;
   }
 }
+
+/**
+ * Represents a Location with country, state, and city details.
+ *
+ * The `Location` class encapsulates the information returned by the `mra_function_get_location_data_json`
+ * PostgreSQL function, including country, state, and city details along with their respective IDs.
+ *
+ * @class
+ */
+class Location {
+  /**
+   * Creates an instance of Location.
+   * 
+   * @constructor
+   * @param {Object} data - The data object containing location details.
+   * @param {number} data.country_id - The unique identifier of the country.
+   * @param {string} data.country_code - The ISO code of the country.
+   * @param {number} data.state_id - The unique identifier of the state or region.
+   * @param {string} data.state - The name of the state or region.
+   * @param {number} data.city_id - The unique identifier of the city or town.
+   * @param {string} data.city - The name of the city or town.
+   */
+  constructor(data) {
+    this.country_id = data.country_id;
+    this.country_code = data.country_code;
+    this.state_id = data.state_id;
+    this.state = data.state;
+    this.city_id = data.city_id;
+    this.city = data.city;
+  }
+}
+
+/**
+ * Retrieves location data based on the provided geographic coordinates.
+ *
+ * This function executes the PostgreSQL function `mra_function_get_location_data_json` to fetch 
+ * country, state, and city information for the given longitude and latitude. The results are 
+ * mapped to an instance of the `Location` class.
+ *
+ * @async
+ * @function getLocationData
+ * @param {number} longitude - The longitude of the location.
+ * @param {number} latitude - The latitude of the location.
+ * @returns {Promise<Location>} A promise that resolves to a `Location` instance containing the location data.
+ * @throws {Error} If there is an error executing the database function.
+ */
+async function getLocationData(longitude, latitude) {
+  try {
+    const results = await sequelize.query(
+      `SELECT * FROM mra_function_get_location_data_json(:longitude, :latitude)`,
+      {
+        replacements: { longitude, latitude },
+        type: Sequelize.QueryTypes.SELECT
+      }
+    );
+
+    // Map the results to Location instances
+    const locations = results.map(result => {
+      return result.mra_function_get_location_data_json
+        ? result.mra_function_get_location_data_json[0]
+        : result;
+    }).map(result => new Location(result));
+
+    return locations && locations.length > 0 ? locations[0] : null;
+  } catch (error) {
+    console.error('Error executing function:', error);
+    throw error;
+  }
+}
+
+/**
+ * Retrieves states for a given country based on its ISO code.
+ *
+ * This function calls the PostgreSQL function `mra_function_get_states_by_country_code` to fetch 
+ * all states within the country identified by the given ISO code. The results 
+ * are returned as an array of state objects.
+ *
+ * @async
+ * @function getStatesByCountryCode
+ * @param {string} countryCode - The ISO code of the country.
+ * @returns {Promise<Array<{state_id: number, state_name: string}>>} A promise that resolves to an array of state objects.
+ * @throws {Error} If there is an error executing the database function.
+ */
+async function getStatesByCountryCode(countryCode) {
+  try {
+    const results = await sequelize.query(
+      `SELECT * FROM mra_function_get_states_by_country_code(:country_iso_code)`,
+      {
+        replacements: { country_iso_code: countryCode },
+        type: Sequelize.QueryTypes.SELECT
+      }
+    );
+
+    // Return the results directly, as they are already in the desired format
+    return results;
+  } catch (error) {
+    console.error('Error executing function:', error);
+    throw error;
+  }
+}
+
+/**
+ * Retrieves states for a given country based on its ID.
+ *
+ * This function calls the PostgreSQL function `mra_function_get_states_by_country_id` to fetch 
+ * all states within the country identified by the given country ID. The results 
+ * are returned as an array of state objects.
+ *
+ * @async
+ * @function getStatesByCountryId
+ * @param {number} countryId - The ID of the country.
+ * @returns {Promise<Array<{state_id: number, state_name: string}>>} A promise that resolves to an array of state objects.
+ * @throws {Error} If there is an error executing the database function.
+ */
+async function getStatesByCountryId(countryId) {
+  try {
+    const results = await sequelize.query(
+      `SELECT * FROM mra_function_get_states_by_country_id(:country_id)`,
+      {
+        replacements: { country_id: countryId },
+        type: Sequelize.QueryTypes.SELECT
+      }
+    );
+
+    // Return the results directly, as they are already in the desired format
+    return results;
+  } catch (error) {
+    console.error('Error executing function:', error);
+    throw error;
+  }
+}
+
+
+/**
+ * Retrieves cities for a given state in a specified country.
+ *
+ * This function calls the PostgreSQL function `mra_function_get_cities_by_state` to fetch 
+ * all cities that belong to the specified state within the given country. The results 
+ * are returned as an array of city objects.
+ *
+ * @async
+ * @function getCitiesByState
+ * @param {number} countryId - The ID of the country.
+ * @param {number} stateId - The ID of the state.
+ * @returns {Promise<Array<{city_id: number, city_name: string}>>} A promise that resolves to an array of city objects.
+ * @throws {Error} If there is an error executing the database function.
+ */
+async function getCitiesByState(countryId, stateId) {
+  try {
+    const results = await sequelize.query(
+      `SELECT * FROM mra_function_get_cities_by_state(:country_id, :state_id)`,
+      {
+        replacements: { country_id: countryId, state_id: stateId },
+        type: Sequelize.QueryTypes.SELECT
+      }
+    );
+
+    // Return the results directly, as they are already in the desired format
+    return results;
+  } catch (error) {
+    console.error('Error executing function:', error);
+    throw error;
+  }
+}
+
 
 module.exports = {
   closeDBConnections,
@@ -788,5 +1033,10 @@ module.exports = {
   isPrivateCustomer,
   getGenderTypes,
   getTicketCategories,
-  getAddressData
+  getAddressData,
+  getLocationData,
+  getCountries,
+  getStatesByCountryCode,
+  getStatesByCountryId,
+  getCitiesByState
 };
