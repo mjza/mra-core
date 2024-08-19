@@ -479,8 +479,8 @@ const { authorizeUser, checkRequestValidity, isUserAuthorized } = require('../..
  */
 router.get('/tickets', apiRequestLimiter,
   [
-    query('page', 'Page must be a number').optional({ checkFalsy: true }).isNumeric().toInt(),
-    query('limit', 'Limit must be a number').optional({ checkFalsy: true }).isNumeric().toInt(),
+    query('page', 'Page must be a positive integer').optional({ checkFalsy: true }).isInt({ min: 1}).toInt().default(1),
+    query('limit', 'Limit must be a positive integer and no more than 100').optional({ checkFalsy: true }).isInt({ min: 1, max: 100 }).toInt().default(30),
 
     query('ticketId', 'TicketId must be a number.').optional({ checkFalsy: true }).isNumeric().toInt(),
     query('customerId', 'CustomerId must be a number.').optional({ checkFalsy: true }).isNumeric().toInt(),
@@ -514,15 +514,7 @@ router.get('/tickets', apiRequestLimiter,
   ],
   checkRequestValidity,
   (req, res, next) => {
-    /*
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 30;
-    req.pagination = {
-      limit: limit + 1,
-      offset: (page - 1) * limit
-    };
-    */
-
+    // for tickets we manage paginations in a loop to remove some tickets from the results.
     // example: ?order=createdAt,DESC;title,ASC
     const order = req.query.order
       ? req.query.order.split(';').map(pair => {

@@ -1,10 +1,9 @@
 const express = require('express');
 const { query } = require('express-validator');
 const db = require('../../utils/database');
-const { checkRequestValidity } = require('../../utils/validations');
 const { apiRequestLimiter } = require('../../utils/rateLimit');
 const { toLowerCamelCase } = require('../../utils/converters');
-
+const { authorizeUser, checkRequestValidity } = require('../../utils/validations');
 const router = express.Router();
 module.exports = router;
 
@@ -15,6 +14,8 @@ module.exports = router;
  *     summary: Retrieve a list of countries
  *     description: Get a paginated list of countries with optional filters.
  *     tags: [4th]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: isoCode
@@ -154,26 +155,40 @@ router.get('/countries', apiRequestLimiter,
 
     query('limit')
       .optional()
-      .isInt({ min: 1 }).withMessage('Limit must be a positive integer')
+      .isInt({ min: 1, max: 100 }).withMessage('Limit must be a positive integer and no more than 100')
       .toInt()
       .default(30),
 
   ],
   checkRequestValidity,
-  async (req, res) => {
-    
-    const { isoCode, countryName, isSupported, page, limit } = req.query;
-    const where = { is_valid: true };
-    if (isoCode) where.iso_code = isoCode;
-    if (countryName) where.country_name = { ['Sequelize.Op.iLike']: `%${countryName}%` };
-    if (isSupported !== undefined) where.is_supported = isSupported;
-
+  (req, res, next) => {
+    const page = req.query.page;
+    const limit = req.query.limit;
     // Calculate pagination values
-    const offset = (page - 1) * limit;
-    const pagination = { limit: limit + 1, offset }; // Fetch one extra to check for hasMore
+    req.pagination = {
+      limit: limit + 1,
+      offset: (page - 1) * limit
+    };
+    next();
+  },
+  (req, res, next) => {
+    const { isoCode, countryName, isSupported } = req.query;
+    const where = { is_valid: true };
+    if (isoCode) 
+      where.iso_code = isoCode;
+    if (countryName) 
+      where.country_name = { ['Sequelize.Op.iLike']: `%${countryName}%` };
+    if (isSupported !== undefined) 
+      where.is_supported = isSupported;
+    
+    const middleware = authorizeUser({ dom: '0', obj: 'mrag_countries', act: 'R', attrs: { where } });
+    middleware(req, res, next);
+  },
+  async (req, res) => {    
+    const { limit } = req.query;
 
     try {
-      const countries = await db.getCountries(where, pagination);
+      const countries = await db.getCountries(req.conditions.where, req.pagination);
 
       if (!countries || countries.length === 0) {
         return res.status(404).json({ message: 'No countries found' });
