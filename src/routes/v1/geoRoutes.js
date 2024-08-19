@@ -32,59 +32,109 @@ module.exports = router;
  *           type: boolean
  *         description: Filter by whether the country is supported.
  *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number for pagination.
+ *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
- *           default: 10
+ *           default: 30
  *         description: Maximum number of countries to return.
- *       - in: query
- *         name: offset
- *         schema:
- *           type: integer
- *           default: 0
- *         description: Number of countries to skip before starting to collect the result set.
  *     responses:
  *       200:
  *         description: A list of countries retrieved successfully.
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   country_id:
- *                     type: integer
- *                     description: Unique identifier for the country.
- *                   country_name:
- *                     type: string
- *                     description: Name of the country.
- *                   iso_code:
- *                     type: string
- *                     description: ISO 3166-1 alpha-2 country code.
- *                   iso_long_code:
- *                     type: string
- *                     description: ISO 3166-1 alpha-3 country code.
- *                   dial_code:
- *                     type: string
- *                     description: Dial code for the country, including the plus sign.
- *                   languages:
- *                     type: string
- *                     description: Languages spoken in the country.
- *                   is_supported:
- *                     type: boolean
- *                     description: Whether the country is supported.
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       country_id:
+ *                         type: integer
+ *                         description: Unique identifier for the country.
+ *                       country_name:
+ *                         type: string
+ *                         description: Name of the country.
+ *                       iso_code:
+ *                         type: string
+ *                         description: ISO 3166-1 alpha-2 country code.
+ *                       iso_long_code:
+ *                         type: string
+ *                         description: ISO 3166-1 alpha-3 country code.
+ *                       dial_code:
+ *                         type: string
+ *                         description: Dial code for the country, including the plus sign.
+ *                       languages:
+ *                         type: string
+ *                         description: Languages spoken in the country.
+ *                       is_supported:
+ *                         type: boolean
+ *                         description: Whether the country is supported.
+ *                 hasMore:
+ *                   type: boolean
+ *                   description: Indicates if more data is available beyond the current page.
  *       400:
  *         description: Invalid request parameters.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 errors:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       type: 
+ *                         type: string
+ *                         description: The type of validation error (e.g., "field").
+ *                         example: "field"
+ *                       value: 
+ *                         type: string
+ *                         description: The value that caused the validation error.
+ *                         example: "0"
+ *                       msg:
+ *                         type: string
+ *                         description: The error message describing the validation failure.
+ *                         example: "Page must be a positive integer"
+ *                       path:
+ *                         type: string
+ *                         description: The field or parameter that failed validation.
+ *                         example: "page"
+ *                       location:
+ *                         type: string
+ *                         description: The location of the parameter (e.g., "query", "body", "params").
+ *                         example: "query"
+ *       404:
+ *         description: Not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: No countries found
+ *       429:
+ *         $ref: '#/components/responses/ApiRateLimitExceeded'
  *       500:
- *         description: Server internal error.
+ *         $ref: '#/components/responses/ServerInternalError'
  */
 router.get('/countries', apiRequestLimiter,
   [
     query('isoCode')
       .optional()
-      .isString().withMessage('ISO code must be a string')
-      .trim(),
+      .isString().withMessage('Country ISO code must be a string')
+      .matches(/^[A-Za-z_]+$/).withMessage('Country code can only contain letters and underscores')
+      .trim()
+      .toUpperCase(),
 
     query('countryName')
       .optional()
@@ -96,28 +146,31 @@ router.get('/countries', apiRequestLimiter,
       .isBoolean().withMessage('isSupported must be a boolean')
       .toBoolean(),
 
+    query('page')
+      .optional()
+      .isInt({ min: 1 }).withMessage('Page must be a positive integer')
+      .toInt()
+      .default(1),  
+
     query('limit')
       .optional()
       .isInt({ min: 1 }).withMessage('Limit must be a positive integer')
       .toInt()
-      .default(10),
+      .default(30),
 
-    query('offset')
-      .optional()
-      .isInt({ min: 0 }).withMessage('Offset must be a non-negative integer')
-      .toInt()
-      .default(0),
   ],
   checkRequestValidity,
   async (req, res) => {
     
-    const { isoCode, countryName, isSupported, limit, offset } = req.query;
-    const where = {};
+    const { isoCode, countryName, isSupported, page, limit } = req.query;
+    const where = { is_valid: true };
     if (isoCode) where.iso_code = isoCode;
     if (countryName) where.country_name = { ['Sequelize.Op.iLike']: `%${countryName}%` };
     if (isSupported !== undefined) where.is_supported = isSupported;
 
-    const pagination = { limit, offset };
+    // Calculate pagination values
+    const offset = (page - 1) * limit;
+    const pagination = { limit: limit + 1, offset }; // Fetch one extra to check for hasMore
 
     try {
       const countries = await db.getCountries(where, pagination);
@@ -126,7 +179,10 @@ router.get('/countries', apiRequestLimiter,
         return res.status(404).json({ message: 'No countries found' });
       }
 
-      return res.json({data: countries});
+      const hasMore = countries.length > limit;
+      const data = hasMore ? countries.slice(0, limit) : countries;
+
+      return res.json({data, hasMore});
     } catch (err) {
       console.error('Error fetching countries:', err);
       return res.status(500).json({ message: err.message });
@@ -214,25 +270,64 @@ router.get('/countries', apiRequestLimiter,
  *                     description: Full address.
  *       400:
  *         description: Invalid request parameters.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 errors:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       type: 
+ *                         type: string
+ *                         description: The type of validation error (e.g., "field").
+ *                         example: "field"
+ *                       value: 
+ *                         type: string
+ *                         description: The value that caused the validation error.
+ *                         example: "190"
+ *                       msg:
+ *                         type: string
+ *                         description: The error message describing the validation failure.
+ *                         example: "Longitude must be a number between -180 and 180"
+ *                       path:
+ *                         type: string
+ *                         description: The field or parameter that failed validation.
+ *                         example: "longitude"
+ *                       location:
+ *                         type: string
+ *                         description: The location of the parameter (e.g., "query", "body", "params").
+ *                         example: "query"
+
  *       404:
- *         description: Address data not found.
+ *         description: Not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Address data not found
  *       429:
- *         description: API rate limit exceeded.
+ *         $ref: '#/components/responses/ApiRateLimitExceeded'
  *       500:
- *         description: Server internal error.
+ *         $ref: '#/components/responses/ServerInternalError'
  */
 router.get('/addresses', apiRequestLimiter,
   [
     query('longitude')
       .exists().withMessage('Longitude is required')
-      .isFloat().withMessage('Longitude must be a number')
+      .isFloat({ min: -180, max: 180 }).withMessage('Longitude must be a number between -180 and 180')
       .toFloat(),
-
+  
     query('latitude')
       .exists().withMessage('Latitude is required')
-      .isFloat().withMessage('Latitude must be a number')
+      .isFloat({ min: -90, max: 90 }).withMessage('Latitude must be a number between -90 and 90')
       .toFloat(),
-  ],
+  ],  
   checkRequestValidity,
   async (req, res) => {
     const longitude = req.query.longitude;
@@ -301,25 +396,64 @@ router.get('/addresses', apiRequestLimiter,
  *                   description: Name of the city.
  *       400:
  *         description: Invalid request parameters.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 errors:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       type: 
+ *                         type: string
+ *                         description: The type of validation error (e.g., "field").
+ *                         example: "field"
+ *                       value: 
+ *                         type: string
+ *                         description: The value that caused the validation error.
+ *                         example: "190"
+ *                       msg:
+ *                         type: string
+ *                         description: The error message describing the validation failure.
+ *                         example: "Longitude must be a number between -180 and 180"
+ *                       path:
+ *                         type: string
+ *                         description: The field or parameter that failed validation.
+ *                         example: "longitude"
+ *                       location:
+ *                         type: string
+ *                         description: The location of the parameter (e.g., "query", "body", "params").
+ *                         example: "query"
  *       404:
- *         description: Location data not found.
+ *         description: Not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Location data not found
  *       429:
- *         description: API rate limit exceeded.
+ *         $ref: '#/components/responses/ApiRateLimitExceeded'
  *       500:
- *         description: Server internal error.
+ *         $ref: '#/components/responses/ServerInternalError'
  */
 router.get('/location', apiRequestLimiter,
   [
     query('longitude')
       .exists().withMessage('Longitude is required')
-      .isFloat().withMessage('Longitude must be a number')
+      .isFloat({ min: -180, max: 180 }).withMessage('Longitude must be a number between -180 and 180')
       .toFloat(),
-
+  
     query('latitude')
       .exists().withMessage('Latitude is required')
-      .isFloat().withMessage('Latitude must be a number')
+      .isFloat({ min: -90, max: 90 }).withMessage('Latitude must be a number between -90 and 90')
       .toFloat(),
-  ],
+  ]
+  ,
   checkRequestValidity,
   async (req, res) => {
     const longitude = req.query.longitude;
@@ -372,18 +506,57 @@ router.get('/location', apiRequestLimiter,
  *                     description: Name of the state.
  *       400:
  *         description: Invalid request parameters.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 errors:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       type: 
+ *                         type: string
+ *                         description: The type of validation error (e.g., "field").
+ *                         example: "field"
+ *                       value: 
+ *                         type: string
+ *                         description: The value that caused the validation error.
+ *                         example: "c2"
+ *                       msg:
+ *                         type: string
+ *                         description: The error message describing the validation failure.
+ *                         example: "Country code can only contain letters and underscores"
+ *                       path:
+ *                         type: string
+ *                         description: The field or parameter that failed validation.
+ *                         example: "isoCode"
+ *                       location:
+ *                         type: string
+ *                         description: The location of the parameter (e.g., "query", "body", "params").
+ *                         example: "query"
  *       404:
- *         description: States not found.
+ *         description: Not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: States not found
  *       429:
- *         description: API rate limit exceeded.
+ *         $ref: '#/components/responses/ApiRateLimitExceeded'
  *       500:
- *         description: Server internal error.
+ *         $ref: '#/components/responses/ServerInternalError'
  */
 router.get('/statesByCountryCode', apiRequestLimiter,
   [
     query('countryCode')
       .exists().withMessage('Country code is required')
       .isString().withMessage('Country code must be a string')
+      .matches(/^[A-Za-z_]+$/).withMessage('Country code can only contain letters and underscores')
       .trim()
       .toUpperCase(),
   ],
@@ -438,12 +611,50 @@ router.get('/statesByCountryCode', apiRequestLimiter,
  *                     description: Name of the state.
  *       400:
  *         description: Invalid request parameters.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 errors:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       type: 
+ *                         type: string
+ *                         description: The type of validation error (e.g., "field").
+ *                         example: "field"
+ *                       value: 
+ *                         type: string
+ *                         description: The value that caused the validation error.
+ *                         example: "-5"
+ *                       msg:
+ *                         type: string
+ *                         description: The error message describing the validation failure.
+ *                         example: "Country ID must be a positive integer"
+ *                       path:
+ *                         type: string
+ *                         description: The field or parameter that failed validation.
+ *                         example: "countryId"
+ *                       location:
+ *                         type: string
+ *                         description: The location of the parameter (e.g., "query", "body", "params").
+ *                         example: "query"
  *       404:
- *         description: States not found.
+ *         description: Not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: States not found
  *       429:
- *         description: API rate limit exceeded.
+ *         $ref: '#/components/responses/ApiRateLimitExceeded'
  *       500:
- *         description: Server internal error.
+ *         $ref: '#/components/responses/ServerInternalError'
  */
 router.get('/statesByCountryId', apiRequestLimiter,
   [
@@ -509,12 +720,50 @@ router.get('/statesByCountryId', apiRequestLimiter,
  *                     description: Name of the city.
  *       400:
  *         description: Invalid request parameters.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 errors:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       type: 
+ *                         type: string
+ *                         description: The type of validation error (e.g., "field").
+ *                         example: "field"
+ *                       value: 
+ *                         type: string
+ *                         description: The value that caused the validation error.
+ *                         example: "-5"
+ *                       msg:
+ *                         type: string
+ *                         description: The error message describing the validation failure.
+ *                         example: "Country ID must be a positive integer"
+ *                       path:
+ *                         type: string
+ *                         description: The field or parameter that failed validation.
+ *                         example: "countryId"
+ *                       location:
+ *                         type: string
+ *                         description: The location of the parameter (e.g., "query", "body", "params").
+ *                         example: "query"
  *       404:
- *         description: Cities not found.
+ *         description: Not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example:  Cities not found
  *       429:
- *         description: API rate limit exceeded.
+ *         $ref: '#/components/responses/ApiRateLimitExceeded'
  *       500:
- *         description: Server internal error.
+ *         $ref: '#/components/responses/ServerInternalError'
  */
 router.get('/citiesByState', apiRequestLimiter,
   [
