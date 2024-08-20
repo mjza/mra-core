@@ -780,7 +780,6 @@ class Address {
    * @param {number} data.id - The unique identifier of the address.
    * @param {number} data.geo_latitude - The latitude coordinate of the address.
    * @param {number} data.geo_longitude - The longitude coordinate of the address.
-   * @param {Object} data.geo_location - The geographic location of the address (geometry point).
    * @param {string} [data.street_name] - The name of the street.
    * @param {string} [data.street_type] - The type of the street (e.g., Ave, Blvd).
    * @param {string} [data.street_quad] - The quadrant of the street (e.g., NW, SE).
@@ -793,12 +792,13 @@ class Address {
    * @param {string} [data.region] - The region or state in which the address is located.
    * @param {string} [data.postal_code] - The postal code of the address.
    * @param {string} [data.full_address] - The full formatted address.
+   * @param {string} [data.country_code] - The iso code of the country.
+   * @param {string} [data.country_name] - The name of the country.
    */
   constructor(data) {
     this.id = data.id;
     this.geo_latitude = data.geo_latitude;
     this.geo_longitude = data.geo_longitude;
-    this.geo_location = data.geo_location;
     this.street_name = data.street_name;
     this.street_type = data.street_type;
     this.street_quad = data.street_quad;
@@ -811,6 +811,8 @@ class Address {
     this.region = data.region;
     this.postal_code = data.postal_code;
     this.full_address = data.full_address;
+    this.country_code = data.country_code;
+    this.country_name = data.country_name;
   }
 }
 
@@ -863,6 +865,7 @@ class Location {
    * @param {Object} data - The data object containing location details.
    * @param {number} data.country_id - The unique identifier of the country.
    * @param {string} data.country_code - The ISO code of the country.
+   * @param {string} data.country_name - The name of the country.
    * @param {number} data.state_id - The unique identifier of the state or region.
    * @param {string} data.state - The name of the state or region.
    * @param {number} data.city_id - The unique identifier of the city or town.
@@ -871,6 +874,7 @@ class Location {
   constructor(data) {
     this.country_id = data.country_id;
     this.country_code = data.country_code;
+    this.country_name = data.country_name;
     this.state_id = data.state_id;
     this.state = data.state;
     this.city_id = data.city_id;
@@ -904,9 +908,7 @@ async function getLocationData(longitude, latitude) {
 
     // Map the results to Location instances
     const locations = results.map(result => {
-      return result.mra_function_get_location_data_json
-        ? result.mra_function_get_location_data_json[0]
-        : result;
+      return result.mra_function_get_location_data_json ?? result;
     }).map(result => new Location(result));
 
     return locations && locations.length > 0 ? locations[0] : null;

@@ -60,27 +60,35 @@ module.exports = router;
  *                       country_id:
  *                         type: integer
  *                         description: Unique identifier for the country.
+ *                         example: 85633041
  *                       country_name:
  *                         type: string
  *                         description: Name of the country.
+ *                         example: "Canada"
  *                       iso_code:
  *                         type: string
  *                         description: ISO 3166-1 alpha-2 country code.
+ *                         example: "CA"
  *                       iso_long_code:
  *                         type: string
  *                         description: ISO 3166-1 alpha-3 country code.
+ *                         example: "CAN"
  *                       dial_code:
  *                         type: string
  *                         description: Dial code for the country, including the plus sign.
+ *                         example: "1"
  *                       languages:
  *                         type: string
  *                         description: Languages spoken in the country.
+ *                         example: "en-CA,fr-CA,iu"
  *                       is_supported:
  *                         type: boolean
  *                         description: Whether the country is supported.
+ *                         example: true
  *                 hasMore:
  *                   type: boolean
  *                   description: Indicates if more data is available beyond the current page.
+ *                   example: false
  *       400:
  *         description: Invalid request parameters.
  *         content:
@@ -212,6 +220,8 @@ router.get('/countries', apiRequestLimiter,
  *     summary: Retrieve address data
  *     description: Get address data based on longitude and latitude.
  *     tags: [4th]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: longitude
@@ -231,58 +241,81 @@ router.get('/countries', apiRequestLimiter,
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   id:
- *                     type: string
- *                     description: Unique identifier for the address.
- *                   geoLatitude:
- *                     type: number
- *                     description: Latitude of the address.
- *                   geoLongitude:
- *                     type: number
- *                     description: Longitude of the address.
- *                   geoLocation:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
  *                     type: object
- *                     description: Geo location object.
- *                   streetName:
- *                     type: string
- *                     description: Name of the street.
- *                   streetType:
- *                     type: string
- *                     description: Type of the street.
- *                   streetQuad:
- *                     type: string
- *                     description: Street quadrant.
- *                   streetFullName:
- *                     type: string
- *                     description: Full name of the street.
- *                   streetNo:
- *                     type: string
- *                     description: Street number.
- *                   houseNumber:
- *                     type: integer
- *                     description: House number.
- *                   houseAlpha:
- *                     type: string
- *                     description: House alpha.
- *                   unit:
- *                     type: string
- *                     description: Unit number.
- *                   city:
- *                     type: string
- *                     description: City name.
- *                   region:
- *                     type: string
- *                     description: Region name.
- *                   postalCode:
- *                     type: string
- *                     description: Postal code.
- *                   fullAddress:
- *                     type: string
- *                     description: Full address.
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         description: Unique identifier for the address.
+ *                         example: "734f535bebd6ae6709cc"
+ *                       geoLatitude:
+ *                         type: number
+ *                         description: Latitude of the address.
+ *                         example: 51.07462
+ *                       geoLongitude:
+ *                         type: number
+ *                         description: Longitude of the address.
+ *                         example: -114.12839
+ *                       streetName:
+ *                         type: string
+ *                         description: Name of the street.
+ *                         example: "UNIVERSITY"
+ *                       streetType:
+ *                         type: string
+ *                         description: Type of the street.
+ *                         example: "DR"
+ *                       streetQuad:
+ *                         type: string
+ *                         description: Street quadrant.
+ *                         example: "NW"
+ *                       streetFullName:
+ *                         type: string
+ *                         description: Full name of the street.
+ *                         example: "UNIVERSITY DR NW"
+ *                       streetNo:
+ *                         type: string
+ *                         description: Street number.
+ *                         example: "2500A"
+ *                       houseNumber:
+ *                         type: integer
+ *                         description: House number.
+ *                         example: 2500
+ *                       houseAlpha:
+ *                         type: string
+ *                         description: House alpha.
+ *                         example: "A"
+ *                       unit:
+ *                         type: string
+ *                         description: Unit number.
+ *                         example: 406
+ *                       city:
+ *                         type: string
+ *                         description: City name.
+ *                         example: "Calgary"
+ *                       region:
+ *                         type: string
+ *                         description: Region name.
+ *                         example: "Alberta"
+ *                       postalCode:
+ *                         type: string
+ *                         description: Postal code.
+ *                         example: "T2N 1N4"
+ *                       fullAddress:
+ *                         type: string
+ *                         description: Full address.
+ *                         example: "2500 UNIVERSITY DR NW"
+ *                       countryCode:
+ *                         type: string
+ *                         description: ISO code of the country.
+ *                         example: "CA"
+ *                       countryName:
+ *                         type: string
+ *                         description: Name of the country.
+ *                         example: "Canada"
  *       400:
  *         description: Invalid request parameters.
  *         content:
@@ -344,6 +377,10 @@ router.get('/addresses', apiRequestLimiter,
       .toFloat(),
   ],  
   checkRequestValidity,
+  (req, res, next) => {    
+    const middleware = authorizeUser({ dom: '0', obj: 'mrag_addresses', act: 'R', attrs: {} });
+    middleware(req, res, next);
+  },
   async (req, res) => {
     const longitude = req.query.longitude;
     const latitude = req.query.latitude;
@@ -355,7 +392,7 @@ router.get('/addresses', apiRequestLimiter,
         return res.status(404).json({ message: 'Address data not found' });
       }
 
-      return res.json(addressDataArray.map(item => toLowerCamelCase(item)));
+      return res.json({data: addressDataArray.map(item => toLowerCamelCase(item))});
     } catch (err) {
       console.error('Error fetching address data:', err);
       return res.status(500).json({ message: err.message });
@@ -370,6 +407,8 @@ router.get('/addresses', apiRequestLimiter,
  *     summary: Retrieve location data
  *     description: Get location data including country, state, and city based on longitude and latitude.
  *     tags: [4th]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: longitude
@@ -391,24 +430,37 @@ router.get('/addresses', apiRequestLimiter,
  *             schema:
  *               type: object
  *               properties:
- *                 countryId:
- *                   type: integer
- *                   description: Unique identifier for the country.
- *                 countryCode:
- *                   type: string
- *                   description: ISO code of the country.
- *                 stateId:
- *                   type: integer
- *                   description: Unique identifier for the state.
- *                 state:
- *                   type: string
- *                   description: Name of the state.
- *                 cityId:
- *                   type: integer
- *                   description: Unique identifier for the city.
- *                 city:
- *                   type: string
- *                   description: Name of the city.
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     countryId:
+ *                       type: integer
+ *                       description: Unique identifier for the country.
+ *                       example: 85633041
+ *                     countryCode:
+ *                       type: string
+ *                       description: ISO code of the country.
+ *                       example: "CA"
+ *                     countryName:
+ *                       type: string
+ *                       description: Name of the country.
+ *                       example: "Canada"
+ *                     stateId:
+ *                       type: integer
+ *                       description: Unique identifier for the state.
+ *                       example: 85682091
+ *                     state:
+ *                       type: string
+ *                       description: Name of the state.
+ *                       example: "Alberta"
+ *                     cityId:
+ *                       type: integer
+ *                       description: Unique identifier for the city.
+ *                       example: 890458845
+ *                     city:
+ *                       type: string
+ *                       description: Name of the city.
+ *                       example: "Calgary"
  *       400:
  *         description: Invalid request parameters.
  *         content:
@@ -467,9 +519,12 @@ router.get('/location', apiRequestLimiter,
       .exists().withMessage('Latitude is required')
       .isFloat({ min: -90, max: 90 }).withMessage('Latitude must be a number between -90 and 90')
       .toFloat(),
-  ]
-  ,
+  ],
   checkRequestValidity,
+  (req, res, next) => {    
+    const middleware = authorizeUser({ dom: '0', obj: 'mrag_addresses', act: 'R', attrs: {} });
+    middleware(req, res, next);
+  },
   async (req, res) => {
     const longitude = req.query.longitude;
     const latitude = req.query.latitude;
@@ -481,7 +536,7 @@ router.get('/location', apiRequestLimiter,
         return res.status(404).json({ message: 'Location data not found' });
       }
 
-      return res.json(toLowerCamelCase(locationData));
+      return res.json({data: toLowerCamelCase(locationData)});
     } catch (err) {
       console.error('Error fetching location data:', err);
       return res.status(500).json({ message: err.message });
@@ -496,6 +551,8 @@ router.get('/location', apiRequestLimiter,
  *     summary: Retrieve states by country code
  *     description: Get all states within a country using the country's ISO code.
  *     tags: [4th]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: countryCode
@@ -509,16 +566,21 @@ router.get('/location', apiRequestLimiter,
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   stateId:
- *                     type: integer
- *                     description: Unique identifier for the state.
- *                   stateName:
- *                     type: string
- *                     description: Name of the state.
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       stateId:
+ *                         type: integer
+ *                         description: Unique identifier for the state.
+ *                         example: 85682091
+ *                       stateName:
+ *                         type: string
+ *                         description: Name of the state.
+ *                         example: "Alberta"
  *       400:
  *         description: Invalid request parameters.
  *         content:
@@ -576,6 +638,10 @@ router.get('/statesByCountryCode', apiRequestLimiter,
       .toUpperCase(),
   ],
   checkRequestValidity,
+  (req, res, next) => {    
+    const middleware = authorizeUser({ dom: '0', obj: 'mrag_addresses', act: 'R', attrs: {} });
+    middleware(req, res, next);
+  },
   async (req, res) => {
     const countryCode = req.query.countryCode;
 
@@ -586,7 +652,7 @@ router.get('/statesByCountryCode', apiRequestLimiter,
         return res.status(404).json({ message: 'States not found' });
       }
 
-      return res.json(states.map(item => toLowerCamelCase(item)));
+      return res.json({ data: states.map(item => toLowerCamelCase(item))});
     } catch (err) {
       console.error('Error fetching states:', err);
       return res.status(500).json({ message: err.message });
@@ -601,6 +667,8 @@ router.get('/statesByCountryCode', apiRequestLimiter,
  *     summary: Retrieve states by country ID
  *     description: Get all states within a country using the country's ID.
  *     tags: [4th]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: countryId
@@ -614,16 +682,21 @@ router.get('/statesByCountryCode', apiRequestLimiter,
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   stateId:
- *                     type: integer
- *                     description: Unique identifier for the state.
- *                   stateName:
- *                     type: string
- *                     description: Name of the state.
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       stateId:
+ *                         type: integer
+ *                         description: Unique identifier for the state.
+ *                         example: 85682091
+ *                       stateName:
+ *                         type: string
+ *                         description: Name of the state.
+ *                         example: "Alberta"
  *       400:
  *         description: Invalid request parameters.
  *         content:
@@ -679,6 +752,10 @@ router.get('/statesByCountryId', apiRequestLimiter,
       .toInt(),
   ],
   checkRequestValidity,
+  (req, res, next) => {    
+    const middleware = authorizeUser({ dom: '0', obj: 'mrag_addresses', act: 'R', attrs: {} });
+    middleware(req, res, next);
+  },
   async (req, res) => {
     const countryId = req.query.countryId;
 
@@ -689,7 +766,7 @@ router.get('/statesByCountryId', apiRequestLimiter,
         return res.status(404).json({ message: 'States not found' });
       }
 
-      return res.json(states.map(item => toLowerCamelCase(item)));
+      return res.json({ data: states.map(item => toLowerCamelCase(item))});
     } catch (err) {
       console.error('Error fetching states:', err);
       return res.status(500).json({ message: err.message });
@@ -704,6 +781,8 @@ router.get('/statesByCountryId', apiRequestLimiter,
  *     summary: Retrieve cities by state ID and country ID
  *     description: Get all cities within a state using the state's ID and the country's ID.
  *     tags: [4th]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: countryId
@@ -719,20 +798,25 @@ router.get('/statesByCountryId', apiRequestLimiter,
  *         description: The ID of the state to retrieve cities for.
  *     responses:
  *       200:
- *         description: Cities retrieved successfully.
+ *         description: States retrieved successfully.
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   cityId:
- *                     type: integer
- *                     description: Unique identifier for the city.
- *                   cityName:
- *                     type: string
- *                     description: Name of the city.
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       stateId:
+ *                         type: integer
+ *                         description: Unique identifier for the city.
+ *                         example: 890458845
+ *                       stateName:
+ *                         type: string
+ *                         description: Name of the city.
+ *                         example: "Calgary"
  *       400:
  *         description: Invalid request parameters.
  *         content:
@@ -793,6 +877,10 @@ router.get('/citiesByState', apiRequestLimiter,
       .toInt(),
   ],
   checkRequestValidity,
+  (req, res, next) => {    
+    const middleware = authorizeUser({ dom: '0', obj: 'mrag_addresses', act: 'R', attrs: {} });
+    middleware(req, res, next);
+  },
   async (req, res) => {
     const countryId = req.query.countryId;
     const stateId = req.query.stateId;
@@ -804,7 +892,7 @@ router.get('/citiesByState', apiRequestLimiter,
         return res.status(404).json({ message: 'Cities not found' });
       }
 
-      return res.json(cities.map(item => toLowerCamelCase(item)));
+      return res.json({data: cities.map(item => toLowerCamelCase(item))});
     } catch (err) {
       console.error('Error fetching cities:', err);
       return res.status(500).json({ message: err.message });

@@ -113,7 +113,7 @@ const isUserAuthorized = async (extraData, req) => {
             dom: extraData.dom,
             obj: extraData.obj,
             act: extraData.act,
-            attrs: extraData.attrs
+            attrs: extraData.attrs ?? {}
         };
         
         const serviceUrl = process.env.AUTH_SERVER_URL + '/v1/authorize';
