@@ -149,20 +149,25 @@ router.get('/user_details', apiRequestLimiter,
   [
     query('userId')
       .optional({ checkFalsy: true })
-      .isNumeric().withMessage('UserId must be a number.'),
+      .isNumeric().withMessage('User ID must be a number.')
+      .toInt({ min: 1 }).withMessage('User ID must be a positive integer'),
+    
     query('page')
-      .optional({ checkFalsy: true })
-      .isNumeric().withMessage('Page must be a number')
-      .toInt(),
+      .optional()
+      .isInt({ min: 1 }).withMessage('Page must be a positive integer')
+      .toInt()
+      .default(1),  
+
     query('limit')
-      .optional({ checkFalsy: true })
-      .isNumeric().withMessage('Limit must be a number')
-      .toInt(),
+      .optional()
+      .isInt({ min: 1, max: 100 }).withMessage('Limit must be a positive integer and no more than 100')
+      .toInt()
+      .default(30),
   ],
   checkRequestValidity,
   (req, res, next) => {
-    const page = req.query.page || 1;
-    const limit = req.query.limit || 30;
+    const page = req.query.page;
+    const limit = req.query.limit;
     req.pagination = {
       limit: limit + 1,
       offset: (page - 1) * limit

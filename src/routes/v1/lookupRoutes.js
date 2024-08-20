@@ -14,6 +14,8 @@ const router = express.Router();
  *     summary: Retrieve gender types
  *     description: Get the list of gender types with optional pagination.
  *     tags: [1st]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: page
@@ -77,14 +79,16 @@ const router = express.Router();
 router.get('/gender_types', apiRequestLimiter,
   [
     query('page')
-      .optional({ checkFalsy: true })
-      .isNumeric().withMessage('Page must be a number')
-      .toInt(),
+      .optional()
+      .isInt({ min: 1 }).withMessage('Page must be a positive integer')
+      .toInt()
+      .default(1),  
 
     query('limit')
-      .optional({ checkFalsy: true })
-      .isNumeric().withMessage('Limit must be a number')
-      .toInt(),
+      .optional()
+      .isInt({ min: 1, max: 100 }).withMessage('Limit must be a positive integer and no more than 100')
+      .toInt()
+      .default(30),
   ],
   checkRequestValidity,
   (req, res, next) => {
@@ -95,6 +99,10 @@ router.get('/gender_types', apiRequestLimiter,
       offset: (page - 1) * limit
     };
     next();
+  },
+  async (req, res, next) => {
+    const middleware = authorizeUser({ dom: '0', obj: 'mra_gender_types', act: 'R', attrs: { } });
+    middleware(req, res, next);
   },
   async (req, res) => {
     try {
@@ -221,38 +229,42 @@ router.get('/ticket_categories', apiRequestLimiter,
       .optional({ checkFalsy: true })
       .isString().withMessage('Ticket title must be a string'),
     
-    query('latitude')
-      .optional({ checkFalsy: true })
-      .isFloat().withMessage('Latitude must be a number'),
-
     query('longitude')
-      .optional({ checkFalsy: true })
-      .isFloat().withMessage('Longitude must be a number'),
+      .exists().withMessage('Longitude is required')
+      .isFloat({ min: -180, max: 180 }).withMessage('Longitude must be a number between -180 and 180')
+      .toFloat(),
+  
+    query('latitude')
+      .exists().withMessage('Latitude is required')
+      .isFloat({ min: -90, max: 90 }).withMessage('Latitude must be a number between -90 and 90')
+      .toFloat(),
 
     query('customerId')
       .optional({ checkFalsy: true })
       .isNumeric().withMessage('Customer ID must be a number')
-      .toInt(),
+      .toInt({ min: 1 }).withMessage('Customer ID must be a positive integer'),
 
     query('customerTypeId')
       .optional({ checkFalsy: true })
       .isNumeric().withMessage('Customer Type ID must be a number')
-      .toInt(),  
+      .toInt({ min: 1 }).withMessage('Customer Type ID must be a positive integer'),  
 
     query('page')
-      .optional({ checkFalsy: true })
-      .isNumeric().withMessage('Page must be a number')
-      .toInt(),
+      .optional()
+      .isInt({ min: 1 }).withMessage('Page must be a positive integer')
+      .toInt()
+      .default(1),  
 
     query('limit')
-      .optional({ checkFalsy: true })
-      .isNumeric().withMessage('Limit must be a number')
-      .toInt(),
+      .optional()
+      .isInt({ min: 1, max: 100 }).withMessage('Limit must be a positive integer and no more than 100')
+      .toInt()
+      .default(30),
   ],
   checkRequestValidity,
   (req, res, next) => {
-    const page = req.query.page || 1;
-    const limit = req.query.limit || 30;
+    const page = req.query.page;
+    const limit = req.query.limit;
     req.pagination = {
       limit: limit + 1,
       offset: (page - 1) * limit
