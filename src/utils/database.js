@@ -194,6 +194,10 @@ const deleteAuditLog = async (logId) => {
  */
 async function getGenderTypes(where, pagination) {
   const { limit, offset } = pagination;
+  
+  if(isNaN(limit) || isNaN(offset) || limit <= 0 || offset < 0)
+    throw new Error('Limit and offset must be valid numbers');
+
   try {
     const genderTypes = await MraGenderTypes.findAll({
       where,
@@ -228,6 +232,10 @@ async function getGenderTypes(where, pagination) {
  */
 async function getUserDetails(where, pagination) {
   const { limit, offset } = pagination;
+
+  if(isNaN(limit) || isNaN(offset) || limit <= 0 || offset < 0)
+    throw new Error('Limit and offset must be valid numbers');
+
   const userDetails = await MraUserDetails.findAll({
     where,
     limit,
@@ -497,6 +505,9 @@ const activateUser = async (user) => {
 async function getTickets(where, pagination, order = [['created_at', 'DESC']]) {
   const { limit, offset } = pagination;
 
+  if(isNaN(limit) || isNaN(offset) || limit <= 0 || offset < 0)
+    throw new Error('Limit and offset must be valid numbers');
+
   const tickets = await MraTickets.findAll({
     where: convertSequelizeOperators(where),
     offset,
@@ -631,6 +642,10 @@ const isPrivateCustomer = async (customerId) => {
  */
 async function getTicketCategories(ticketTitle, latitude, longitude, customerId, customerTypeId, pagination) {
   const { limit, offset } = pagination;
+
+  if(isNaN(limit) || isNaN(offset) || limit <= 0 || offset < 0)
+    throw new Error('Limit and offset must be valid numbers');
+
   const geoCondition = latitude && longitude ? `ST_Contains(tc.boundary, ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326))` : 'true';
   const customerCondition = customerId ? `tc.customer_id = :customerId` : 'true';
   const customerTypeCondition = customerTypeId ? `tc.customer_type_id = :customerTypeId` : 'true';
@@ -737,6 +752,10 @@ async function getTicketCategories(ticketTitle, latitude, longitude, customerId,
  */
 async function getCountries(where = {}, pagination) {
   const { limit, offset } = pagination;
+
+  if(isNaN(limit) || isNaN(offset) || limit <= 0 || offset < 0)
+    throw new Error('Limit and offset must be valid numbers');
+  
   try {
     const countries = await MragCountries.findAll({
       where: convertSequelizeOperators({

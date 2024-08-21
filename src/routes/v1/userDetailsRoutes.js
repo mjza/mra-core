@@ -166,8 +166,8 @@ router.get('/user_details', apiRequestLimiter,
   ],
   checkRequestValidity,
   (req, res, next) => {
-    const page = req.query.page;
-    const limit = req.query.limit;
+    const page = req.query.page || 1;
+    const limit = req.query.limit || 30;
     req.pagination = {
       limit: limit + 1,
       offset: (page - 1) * limit
@@ -176,13 +176,15 @@ router.get('/user_details', apiRequestLimiter,
   },
   (req, res, next) => {
     const userId = req.query && req.query.userId;
-    const middleware = authorizeUser({ dom: '0', obj: 'mra_user_details', act: 'R', attrs: { where: { user_id: userId && parseInt(userId, 10) } } });
+    const where = { user_id: userId && parseInt(userId, 10) };
+    const middleware = authorizeUser({ dom: '0', obj: 'mra_user_details', act: 'R', attrs: { where } });
     middleware(req, res, next);
   },
   async (req, res) => {
     try {
+      
       const userDetailsArray = await db.getUserDetails(req.conditions.where, req.pagination);
-
+      
       if (!userDetailsArray || userDetailsArray.length === 0) {
         return res.status(404).json({ message: 'User details not found' });
       }

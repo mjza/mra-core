@@ -48,7 +48,8 @@ describe('/user_details endpoints', () => {
 
     describe('GET /user_details before creation', () => {
         it('should return a user details with no creator as it has not yet defined', async () => {
-            const res = await request(app).get('/v1/user_details').set('Authorization', `Bearer ${authData.token}`);
+            const res = await request(app).get('/v1/user_details')
+                                          .set('Authorization', `Bearer ${authData.token}`);
             expect(res.statusCode).toEqual(200);
             expect(res.body).not.toBeNull();
             expect(Array.isArray(res.body.data)).toBeTruthy();

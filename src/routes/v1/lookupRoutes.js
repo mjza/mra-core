@@ -263,8 +263,8 @@ router.get('/ticket_categories', apiRequestLimiter,
   ],
   checkRequestValidity,
   (req, res, next) => {
-    const page = req.query.page;
-    const limit = req.query.limit;
+    const page = req.query.page || 1;
+    const limit = req.query.limit || 30;
     req.pagination = {
       limit: limit + 1,
       offset: (page - 1) * limit

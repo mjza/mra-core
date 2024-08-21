@@ -170,8 +170,8 @@ router.get('/countries', apiRequestLimiter,
   ],
   checkRequestValidity,
   (req, res, next) => {
-    const page = req.query.page;
-    const limit = req.query.limit;
+    const page = req.query.page || 1;
+    const limit = req.query.limit || 30;
     // Calculate pagination values
     req.pagination = {
       limit: limit + 1,
