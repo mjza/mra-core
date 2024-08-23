@@ -29,6 +29,12 @@ module.exports = function(sequelize, DataTypes) {
 						allowNull: true,
 						defaultValue: true,
 						comment: "If data are not valid we can deactivate it from listing using this column."
+				},
+				is_supported: {
+						type: DataTypes.BOOLEAN,
+						allowNull: false,
+						defaultValue: false,
+						comment: "If the city is supported by our app."
 				}
 		}, {
 				sequelize,
