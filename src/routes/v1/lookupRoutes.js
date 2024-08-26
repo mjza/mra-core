@@ -230,12 +230,12 @@ router.get('/ticket_categories', apiRequestLimiter,
       .isString().withMessage('Ticket title must be a string'),
     
     query('longitude')
-      .exists().withMessage('Longitude is required')
+      .optional()
       .isFloat({ min: -180, max: 180 }).withMessage('Longitude must be a number between -180 and 180')
       .toFloat(),
   
     query('latitude')
-      .exists().withMessage('Latitude is required')
+      .optional()
       .isFloat({ min: -90, max: 90 }).withMessage('Latitude must be a number between -90 and 90')
       .toFloat(),
 
@@ -272,11 +272,10 @@ router.get('/ticket_categories', apiRequestLimiter,
     next();
   },
   async (req, res, next) => {
-    let where = {};
     const customerId = req.query.customerId;
     const isPrivateCustomer = await db.isPrivateCustomer(customerId);
     const domain = isPrivateCustomer ? String(customerId) : '0';
-    const middleware = authorizeUser({ dom: domain, obj: 'mra_ticket_categories', act: 'R', attrs: { where } });
+    const middleware = authorizeUser({ dom: domain, obj: 'mra_ticket_categories', act: 'R', attrs: { } });
     middleware(req, res, next);
   },
   async (req, res) => {

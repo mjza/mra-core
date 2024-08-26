@@ -647,8 +647,9 @@ async function getTicketCategories(ticketTitle, latitude, longitude, customerId,
     throw new Error('Limit and offset must be valid numbers');
 
   const geoCondition = latitude && longitude ? `ST_Contains(tc.boundary, ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326))` : 'true';
-  const customerCondition = customerId ? `tc.customer_id = :customerId` : 'true';
-  const customerTypeCondition = customerTypeId ? `tc.customer_type_id = :customerTypeId` : 'true';
+  const customerCondition = customerId ? `tc.customer_id = :customerId` : 'tc.customer_id IS NULL';
+  const customerTypeCondition = customerTypeId ? `tc.customer_type_id = :customerTypeId` : 
+  customerId ? `tc.customer_type_id = (SELECT c.customer_type_id FROM mra_customers c WHERE c.customer_id = :customerId)` : 'true';
 
   // Tokenize the ticket title by splitting it into individual words
   const tokens = ticketTitle ? ticketTitle.trim().split(/\s+/) : [];
@@ -703,12 +704,21 @@ async function getTicketCategories(ticketTitle, latitude, longitude, customerId,
         AND
         (
           ${customerCondition}
-          OR 
+          ${customerId ? 'OR' : 'AND'} 
           ${customerTypeCondition}
         )
       )
       AND
       ${additionalCondition}
+      ${customerId ? `
+        AND NOT EXISTS (
+          SELECT 1 
+          FROM mra_ticket_categories tc_sub 
+          WHERE 
+            tc_sub.source_id = tc.ticket_category_id 
+            AND tc_sub.customer_id IS NOT NULL
+            AND tc_sub.customer_id = :customerId
+        )` : ''}
     ORDER BY rank DESC
     LIMIT :limit OFFSET :offset;
   `;

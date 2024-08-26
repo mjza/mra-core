@@ -11,18 +11,15 @@ describe('/user_details endpoints', () => {
         app = await createApp();
 
         mockUser = await generateMockUserRoute();
-        let serviceUrl = process.env.AUTH_SERVER_URL + '/v1/register';
 
-        let response = await axios.post(serviceUrl, mockUser);
+        let response = await axios.post(`${process.env.AUTH_SERVER_URL}/v1/register`, mockUser);
         const userId = response.data.userId;
         // Get the test user from the database
         testUser = await db.getUserByUserId(userId);
         var user = { username: testUser.username, activationCode: testUser.activation_code };
         await db.activateUser(user);
 
-        serviceUrl = process.env.AUTH_SERVER_URL + '/v1/login';
-
-        response = await axios.post(serviceUrl, { usernameOrEmail: mockUser.username, password: mockUser.password });
+        response = await axios.post(`${process.env.AUTH_SERVER_URL}/v1/login`, { usernameOrEmail: mockUser.username, password: mockUser.password });
 
         authData = response.data;
             
