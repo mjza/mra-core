@@ -9,21 +9,6 @@ const base64Encrypted = 'eyJpdiI6ImIxNmJmMzYxODkzYTlhODc0NjcxMDkwYTRjOTY5YmE2Iiw
 // Tests are designed with this secret key to see the expected results.
 const { toLowerCamelCase, toSnakeCase, encrypt, decrypt, encryptObjectItems, decryptObjectItems, convertRequestData } = require('../../utils/converters');
 describe('Test converters', () => {
-    describe('Encryption and Decryption Tests', () => {
-
-        test('encrypt should return a base64 string', () => {
-            const encryted = encrypt(rawString, iv);
-            expect(encryted).not.toBe(rawString);
-            expect(typeof encryted).toBe('string');
-            expect(encryted).toBe(base64Encrypted);
-        });
-
-        test('decrypt should return original string', () => {
-            const decryted = decrypt(base64Encrypted);
-            expect(typeof decryted).toBe('string');
-            expect(decryted).toBe(rawString);
-        });
-    });
 
     describe('toLowerCamelCase', () => {
         test('should convert keys from snake_case to lowerCamelCase', () => {
@@ -103,11 +88,11 @@ describe('Test converters', () => {
                 body: {
                     password: 'secret',
                     email: 'test@example.com',
-                    dateOfBirth: new Date(), 
-                    profilePictureUrl: 'abc', 
+                    dateOfBirth: new Date(),
+                    profilePictureUrl: 'abc',
                     profilePictureThumbnailUrl: 'def',
                     privateProfilePictureUrl: 'ghi'
-                },                
+                },
                 query: {
                     token: 'abcdef',
                     page: 1
@@ -138,11 +123,11 @@ describe('Test converters', () => {
                 body: {
                     password: '****',
                     email: 'test@example.com',
-                    dateOfBirth: '****', 
-                    profilePictureUrl: 'abc', 
+                    dateOfBirth: '****',
+                    profilePictureUrl: 'abc',
                     profilePictureThumbnailUrl: 'def',
                     privateProfilePictureUrl: '****'
-                },                
+                },
                 query: {
                     token: '****',
                     page: 1
@@ -196,5 +181,98 @@ describe('Test converters', () => {
             expect(convertRequestData(req)).toEqual(expectedOutput);
         });
     });
+
+    describe('Encryption and Decryption Tests', () => {
+
+        test('encrypt should return a base64 string', () => {
+            const encryted = encrypt(rawString, iv);
+            expect(encryted).not.toBe(rawString);
+            expect(typeof encryted).toBe('string');
+            expect(encryted).toBe(base64Encrypted);
+        });
+
+        test('decrypt should return original string', () => {
+            const decryted = decrypt(base64Encrypted);
+            expect(typeof decryted).toBe('string');
+            expect(decryted).toBe(rawString);
+        });
+    });
+
+    describe('encryptObjectItems and decryptObjectItems', () => {
+
+        test('should encrypt all string values in the object', () => {
+            const inputObj = {
+                firstName: 'John',
+                lastName: 'Doe',
+                contactInfo: {
+                    emailAddress: 'john.doe@example.com',
+                    phoneNumber: '1234567890'
+                }
+            };
+
+            const encryptedObj = encryptObjectItems(inputObj);
+
+            // Verify that all string values are different from the original
+            expect(encryptedObj.firstName).not.toBe(inputObj.firstName);
+            expect(encryptedObj.lastName).not.toBe(inputObj.lastName);
+            expect(encryptedObj.contactInfo.emailAddress).not.toBe(inputObj.contactInfo.emailAddress);
+            expect(encryptedObj.contactInfo.phoneNumber).not.toBe(inputObj.contactInfo.phoneNumber);
+        });
+
+        test('should decrypt all encrypted string values back to the original values', () => {
+            const inputObj = {
+                firstName: 'John',
+                lastName: 'Doe',
+                contactInfo: {
+                    emailAddress: 'john.doe@example.com',
+                    phoneNumber: '1234567890'
+                }
+            };
+
+            const encryptedObj = encryptObjectItems(inputObj);
+            const decryptedObj = decryptObjectItems(encryptedObj);
+
+            // Verify that the decrypted object matches the original input object
+            expect(decryptedObj).toEqual(inputObj);
+        });
+
+        test('should handle arrays of objects correctly', () => {
+            const inputObj = [
+                { firstName: 'John', lastName: 'Doe' },
+                { firstName: 'Jane', lastName: 'Smith' }
+            ];
+
+            const encryptedObj = encryptObjectItems(inputObj);
+            const decryptedObj = decryptObjectItems(encryptedObj);
+
+            // Verify that the decrypted object matches the original input object
+            expect(decryptedObj).toEqual(inputObj);
+
+            // Verify that all string values in the encrypted object are different from the originals
+            encryptedObj.forEach((obj, index) => {
+                expect(obj.firstName).not.toBe(inputObj[index].firstName);
+                expect(obj.lastName).not.toBe(inputObj[index].lastName);
+            });
+        });
+
+        test('should not alter non-string values during encryption', () => {
+            const date = new Date();
+            const inputObj = {
+                firstName: 'John',
+                age: 30,
+                isVerified: true,
+                birthDate: date
+            };
+
+            const encryptedObj = encryptObjectItems(inputObj);
+            const decryptedObj = decryptObjectItems(encryptedObj);
+
+            // Verify that non-string values remain the same
+            expect(decryptedObj.age).toBe(inputObj.age);
+            expect(decryptedObj.isVerified).toBe(inputObj.isVerified);
+            expect(decryptedObj.birthDate).toEqual(inputObj.birthDate);
+        });
+    });
+
 
 });
