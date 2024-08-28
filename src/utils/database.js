@@ -23,10 +23,13 @@ const addDateRangeFilter = (where, query, field) => {
   const fieldBefore = `${field}Before`;
 
   if (query[fieldAfter] || query[fieldBefore]) {
-    where[field] = {};
+    // Preserve the existing where[field] if it exists
+    where[field] = where[field] || {};
+
     if (query[fieldAfter]) {
       where[field][Sequelize.Op.gte] = new Date(query[fieldAfter]);
     }
+    
     if (query[fieldBefore]) {
       where[field][Sequelize.Op.lte] = new Date(query[fieldBefore]);
     }
