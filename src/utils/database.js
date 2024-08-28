@@ -463,37 +463,6 @@ const deleteUserByUsername = async (username) => {
 };
 
 /**
- * Activates a user in the database based on the provided user information.
- *
- * @param {Object} user - The user object containing username and activationCode.
- * @returns {boolean} True if the user was successfully activated, false otherwise.
- */
-const activateUser = async (user) => {
-  const { username, activationCode } = user;
-  if (!username || !username.trim() || !activationCode || !activationCode.trim())
-    return false;
-
-  // Update the user if the activation code matches and is within the valid timeframe
-  const [updateCount] = await MraUsers.update(
-    { activation_code: null }, // Set activation_code to NULL
-    {
-      where: {
-        username: username.trim().toLowerCase(),
-        activation_code: activationCode.trim(),
-        created_at: {
-          [Sequelize.Op.gte]: Sequelize.literal("(now() AT TIME ZONE 'UTC') - INTERVAL '5 days'"), // created_at >= 5 days ago
-          [Sequelize.Op.lte]: Sequelize.literal("(now() AT TIME ZONE 'UTC')"),   // created_at <= CURRENT_TIMESTAMP
-        },
-        confirmation_at: null, // confirmation_at IS NULL
-      },
-      returning: true, // This option is specific to PostgreSQL
-    }
-  );
-
-  return updateCount > 0; // Returns true if at least one row was updated  
-};
-
-/**
  * Retrieves ticket from the database based on the provided conditions.
  *
  * @param {object} where - The object containing `where` clauses to specify the search criteria.
@@ -1053,7 +1022,6 @@ module.exports = {
   getUserByUserId,
   getUserByUsername,
   deleteUserByUsername,
-  activateUser,
   getUserDetails,
   createUserDetails,
   updateUserDetails,

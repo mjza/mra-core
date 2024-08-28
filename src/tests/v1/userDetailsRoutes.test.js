@@ -1,28 +1,34 @@
 const axios = require('axios');
 const request = require('supertest');
-const {createApp, closeApp} = require('../../app');
+const { createApp, closeApp } = require('../../app');
 const db = require('../../utils/database');
 const { generateMockUserRoute } = require('../../utils/generators');
 
 describe('/user_details endpoints', () => {
     let app, mockUser, testUser, authData, userDetails;
 
+    const headers = {
+        headers: {
+            'x-development-token': process.env.X_DEVELOPMENT_TOKEN,
+        },
+    };
+
     beforeAll(async () => {
         app = await createApp();
 
         mockUser = await generateMockUserRoute();
 
-        let response = await axios.post(`${process.env.AUTH_SERVER_URL}/v1/register`, mockUser);
+        let response = await axios.post(`${process.env.AUTH_SERVER_URL}/v1/register`, mockUser, headers);
         const userId = response.data.userId;
         // Get the test user from the database
         testUser = await db.getUserByUserId(userId);
-        var user = { username: testUser.username, activationCode: testUser.activation_code };
-        await db.activateUser(user);
-
-        response = await axios.post(`${process.env.AUTH_SERVER_URL}/v1/login`, { usernameOrEmail: mockUser.username, password: mockUser.password });
+        const inactiveUser = { username: testUser.username, activationCode: testUser.activation_code };
+        await axios.post(`${process.env.AUTH_SERVER_URL}/v1/activate-by-code`, inactiveUser);
+        const user = { usernameOrEmail: mockUser.username, password: mockUser.password };
+        response = await axios.post(`${process.env.AUTH_SERVER_URL}/v1/login`, user, headers);
 
         authData = response.data;
-            
+
         userDetails = {
             userId: testUser.user_id,
             firstName: 'string1',
@@ -46,7 +52,7 @@ describe('/user_details endpoints', () => {
     describe('GET /user_details before creation', () => {
         it('should return a user details with no creator as it has not yet defined', async () => {
             const res = await request(app).get('/v1/user_details')
-                                          .set('Authorization', `Bearer ${authData.token}`);
+                .set('Authorization', `Bearer ${authData.token}`);
             expect(res.statusCode).toEqual(200);
             expect(res.body).not.toBeNull();
             expect(Array.isArray(res.body.data)).toBeTruthy();
@@ -86,9 +92,9 @@ describe('/user_details endpoints', () => {
             const copy = { ...userDetails };
             copy.userId = 2147483647;
             const res = await request(app)
-            .post('/v1/user_details')
-            .send(copy)
-            .set('Authorization', `Bearer ${authData.token}`);
+                .post('/v1/user_details')
+                .send(copy)
+                .set('Authorization', `Bearer ${authData.token}`);
 
             expect(res.statusCode).toEqual(403);
             expect(res.body.message).toEqual('User is not authorized.');
@@ -96,9 +102,9 @@ describe('/user_details endpoints', () => {
 
         it('should create user details', async () => {
             const res = await request(app)
-            .post('/v1/user_details')
-            .send(userDetails)
-            .set('Authorization', `Bearer ${authData.token}`);
+                .post('/v1/user_details')
+                .send(userDetails)
+                .set('Authorization', `Bearer ${authData.token}`);
 
             expect(res.statusCode).toEqual(201);
             expect(res.body).not.toBeNull();
@@ -118,8 +124,8 @@ describe('/user_details endpoints', () => {
 
         it('should return 403 as token is missing', async () => {
             const res = await request(app)
-            .post('/v1/user_details')
-            .send(userDetails);
+                .post('/v1/user_details')
+                .send(userDetails);
 
             expect(res.statusCode).toEqual(403);
             expect(res.body.message).toEqual('User is not authorized.');
@@ -127,9 +133,9 @@ describe('/user_details endpoints', () => {
 
         it('should return 403 as token is invalid', async () => {
             const res = await request(app)
-            .post('/v1/user_details')
-            .send(userDetails)
-            .set('Authorization', `Bearer ${authData.token}` + 'x');
+                .post('/v1/user_details')
+                .send(userDetails)
+                .set('Authorization', `Bearer ${authData.token}` + 'x');
 
             expect(res.statusCode).toEqual(403);
             expect(res.body.message).toEqual('User is not authorized.');
@@ -139,9 +145,9 @@ describe('/user_details endpoints', () => {
             const copy = { ...userDetails };
             copy.userId++;
             const res = await request(app)
-            .post('/v1/user_details')
-            .send(copy)
-            .set('Authorization', `Bearer ${authData.token}`);
+                .post('/v1/user_details')
+                .send(copy)
+                .set('Authorization', `Bearer ${authData.token}`);
 
             expect(res.statusCode).toEqual(403);
             expect(res.body.message).toEqual('User is not authorized.');
@@ -149,8 +155,8 @@ describe('/user_details endpoints', () => {
 
         it('should returns 422 as the entity exists', async () => {
             const res = await request(app)
-            .post('/v1/user_details')
-            .send(userDetails).set('Authorization', `Bearer ${authData.token}`);
+                .post('/v1/user_details')
+                .send(userDetails).set('Authorization', `Bearer ${authData.token}`);
 
             expect(res.statusCode).toEqual(422);
             expect(res.body.message).toEqual('A record exists for the current user in the user details table.');

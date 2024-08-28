@@ -7,21 +7,24 @@ const { generateMockUserRoute } = require('../../utils/generators');
 describe('Test lookup endpoints', () => {
     let app, mockUser, authData;
 
+    const headers = {
+        headers: {
+            'x-development-token': process.env.X_DEVELOPMENT_TOKEN,
+        },
+    };
+
     beforeAll(async () => {
         app = await createApp();
 
         mockUser = await generateMockUserRoute();
-        let response = await axios.post(`${process.env.AUTH_SERVER_URL}/v1/register`, mockUser);
+        let response = await axios.post(`${process.env.AUTH_SERVER_URL}/v1/register`, mockUser, headers);
         const userId = response.data.userId;
         // Get the test user from the database
         testUser = await db.getUserByUserId(userId);
-        var user = { username: testUser.username, activationCode: testUser.activation_code };
-        await db.activateUser(user);
-
-        response = await axios.post(`${process.env.AUTH_SERVER_URL}/v1/login`, {
-            usernameOrEmail: mockUser.username,
-            password: mockUser.password,
-        });
+        const inactiveUser = { username: testUser.username, activationCode: testUser.activation_code };
+        await axios.post(`${process.env.AUTH_SERVER_URL}/v1/activate-by-code`, inactiveUser, headers);
+        const user = { usernameOrEmail: mockUser.username, password: mockUser.password };
+        response = await axios.post(`${process.env.AUTH_SERVER_URL}/v1/login`, user, headers);
 
         authData = response.data;
     });
