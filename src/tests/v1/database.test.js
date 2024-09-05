@@ -727,4 +727,48 @@ describe('Test DB functions', () => {
 
     });
 
+    describe('isPrivateCustomer', () => {
+        it('should return true for customer with id=0', async () => {
+            const customerId = 0;
+    
+            const result = await db.isPrivateCustomer(customerId);
+            expect(result).toBe(true); // Assuming customer with id=0 is private
+        });
+    
+        it('should return false for customer with id=1', async () => {
+            const customerId = 1;
+    
+            const result = await db.isPrivateCustomer(customerId);
+            expect(result).toBe(false); // Assuming customer with id=1 is not private
+        });
+    
+        it('should return false for negative ids', async () => {
+            const customerId = -1;
+    
+            const result = await db.isPrivateCustomer(customerId);
+            expect(result).toBe(false); // Negative customerId should return false
+        });
+    
+        it('should return false for null id', async () => {
+            const customerId = null;
+    
+            const result = await db.isPrivateCustomer(customerId);
+            expect(result).toBe(false); // Null customerId should return false
+        });
+    
+        it('should return false for string id', async () => {
+            const customerId = 'abc';
+    
+            const result = await db.isPrivateCustomer(customerId);
+            expect(result).toBe(false); // String customerId should return false
+        });
+    
+        it('should return false if customer is not found in the database', async () => {
+            const customerId = 999999999999999;
+    
+            const result = await db.isPrivateCustomer(customerId);
+            expect(result).toBe(false); // Large number customerId should return false
+        });
+    });
+    
 });

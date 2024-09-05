@@ -29,7 +29,7 @@ const addDateRangeFilter = (where, query, field) => {
     if (query[fieldAfter]) {
       where[field][Sequelize.Op.gte] = new Date(query[fieldAfter]);
     }
-    
+
     if (query[fieldBefore]) {
       where[field][Sequelize.Op.lte] = new Date(query[fieldBefore]);
     }
@@ -197,23 +197,18 @@ const deleteAuditLog = async (logId) => {
  */
 async function getGenderTypes(where, pagination) {
   const { limit, offset } = pagination;
-  
-  if(isNaN(limit) || isNaN(offset) || limit <= 0 || offset < 0)
+
+  if (isNaN(limit) || isNaN(offset) || limit <= 0 || offset < 0)
     throw new Error('Limit and offset must be valid numbers');
 
-  try {
-    const genderTypes = await MraGenderTypes.findAll({
-      where,
-      limit,
-      offset,
-      attributes: ['gender_id', 'gender_name', 'sort_order'],
-    });
+  const genderTypes = await MraGenderTypes.findAll({
+    where,
+    limit,
+    offset,
+    attributes: ['gender_id', 'gender_name', 'sort_order'],
+  });
 
-    return genderTypes && genderTypes.map(genderType => genderType.get({ plain: true }));
-  } catch (error) {
-    console.error("Error fetching gender types:", error);
-    throw error;
-  }
+  return genderTypes && genderTypes.map(genderType => genderType.get({ plain: true }));
 }
 
 /**
@@ -236,7 +231,7 @@ async function getGenderTypes(where, pagination) {
 async function getUserDetails(where, pagination) {
   const { limit, offset } = pagination;
 
-  if(isNaN(limit) || isNaN(offset) || limit <= 0 || offset < 0)
+  if (isNaN(limit) || isNaN(offset) || limit <= 0 || offset < 0)
     throw new Error('Limit and offset must be valid numbers');
 
   const userDetails = await MraUserDetails.findAll({
@@ -403,15 +398,12 @@ const getUserByUserId = async (userId) => {
   if (isNaN(userId)) {
     return null;
   }
-  try {
-    const user = await MraUsers.findOne({
-      where: { user_id: userId }
-    });
+  const user = await MraUsers.findOne({
+    where: { user_id: userId }
+  });
 
-    return user && user.get({ plain: true });
-  } catch (error) {
-    console.error('Error retrieving user by userId:', error);
-  }
+  return user && user.get({ plain: true });
+
 };
 
 /**
@@ -424,17 +416,13 @@ const getUserByUsername = async (username) => {
   if (!username || !username.trim()) {
     return null;
   }
-  try {
-    const user = await MraUsers.findOne({
-      where: {
-        username: username.trim().toLowerCase()
-      }
-    });
+  const user = await MraUsers.findOne({
+    where: {
+      username: username.trim().toLowerCase()
+    }
+  });
 
-    return user && user.get({ plain: true });
-  } catch (error) {
-    console.error('Error retrieving user by username:', error);
-  }
+  return user && user.get({ plain: true });
 };
 
 /**
@@ -477,7 +465,7 @@ const deleteUserByUsername = async (username) => {
 async function getTickets(where, pagination, order = [['created_at', 'DESC']]) {
   const { limit, offset } = pagination;
 
-  if(isNaN(limit) || isNaN(offset) || limit <= 0 || offset < 0)
+  if (isNaN(limit) || isNaN(offset) || limit <= 0 || offset < 0)
     throw new Error('Limit and offset must be valid numbers');
 
   const tickets = await MraTickets.findAll({
@@ -586,17 +574,21 @@ async function deleteTicket(where) {
  * @returns {Promise<boolean>} A promise that resolves to true if the customer is private, false otherwise.
  */
 const isPrivateCustomer = async (customerId) => {
-  if (!customerId && isNaN(customerId)) {
-    return false; // Returns false if no customerId is provided
+  try {
+    if (isNaN(customerId)) {
+      return false; // Returns false if no customerId is provided
+    }
+
+    const customer = await MraCustomers.findByPk(customerId, {
+      attributes: ['is_private'], // Optionally limit to only load the 'is_private' field
+      raw: true
+    });
+
+    // Check if customer was found and return the 'is_private' status, otherwise false
+    return customer ? customer.is_private : false;
+  } catch (error) {
+    return false;
   }
-
-  const customer = await MraCustomers.findByPk(customerId, {
-    attributes: ['is_private'], // Optionally limit to only load the 'is_private' field
-    raw: true
-  });
-
-  // Check if customer was found and return the 'is_private' status, otherwise false
-  return customer ? customer.is_private : false;
 };
 
 /**
@@ -615,13 +607,13 @@ const isPrivateCustomer = async (customerId) => {
 async function getTicketCategories(ticketTitle, latitude, longitude, customerId, customerTypeId, pagination) {
   const { limit, offset } = pagination;
 
-  if(isNaN(limit) || isNaN(offset) || limit <= 0 || offset < 0)
+  if (isNaN(limit) || isNaN(offset) || limit <= 0 || offset < 0)
     throw new Error('Limit and offset must be valid numbers');
 
   const geoCondition = latitude && longitude ? `ST_Contains(tc.boundary, ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326))` : 'true';
   const customerCondition = customerId ? `tc.customer_id = :customerId` : 'tc.customer_id IS NULL';
-  const customerTypeCondition = customerTypeId ? `tc.customer_type_id = :customerTypeId` : 
-  customerId ? `tc.customer_type_id = (SELECT c.customer_type_id FROM mra_customers c WHERE c.customer_id = :customerId)` : 'true';
+  const customerTypeCondition = customerTypeId ? `tc.customer_type_id = :customerTypeId` :
+    customerId ? `tc.customer_type_id = (SELECT c.customer_type_id FROM mra_customers c WHERE c.customer_id = :customerId)` : 'true';
 
   // Tokenize the ticket title by splitting it into individual words
   const tokens = ticketTitle ? ticketTitle.trim().split(/\s+/) : [];
@@ -735,10 +727,9 @@ async function getTicketCategories(ticketTitle, latitude, longitude, customerId,
 async function getCountries(where = {}, pagination) {
   const { limit, offset } = pagination;
 
-  if(isNaN(limit) || isNaN(offset) || limit <= 0 || offset < 0)
+  if (isNaN(limit) || isNaN(offset) || limit <= 0 || offset < 0)
     throw new Error('Limit and offset must be valid numbers');
-  
-  try {
+
     const countries = await MragCountries.findAll({
       where: convertSequelizeOperators({
         ...where,
@@ -758,10 +749,6 @@ async function getCountries(where = {}, pagination) {
     });
 
     return countries && countries.map(country => country.get({ plain: true }));
-  } catch (error) {
-    console.error("Error fetching countries:", error);
-    throw error;
-  }
 }
 
 /**
@@ -831,23 +818,18 @@ class Address {
  * @throws {Error} If there is an error executing the database function.
  */
 async function getAddressData(longitude, latitude) {
-  try {
-      const results = await sequelize.query(
-          `SELECT * FROM mra_function_get_address_data_rs(:longitude, :latitude)`,
-          {
-              replacements: { longitude, latitude },
-              type: Sequelize.QueryTypes.SELECT
-          }
-      );
+    const results = await sequelize.query(
+      `SELECT * FROM mra_function_get_address_data_rs(:longitude, :latitude)`,
+      {
+        replacements: { longitude, latitude },
+        type: Sequelize.QueryTypes.SELECT
+      }
+    );
 
-      // Map the results to Address instances
-      const addresses = results.map(result => new Address(result));
+    // Map the results to Address instances
+    const addresses = results.map(result => new Address(result));
 
-      return addresses;
-  } catch (error) {
-      console.error('Error executing function:', error);
-      throw error;
-  }
+    return addresses;
 }
 
 /**
@@ -898,7 +880,6 @@ class Location {
  * @throws {Error} If there is an error executing the database function.
  */
 async function getLocationData(longitude, latitude) {
-  try {
     const results = await sequelize.query(
       `SELECT * FROM mra_function_get_location_data_json(:longitude, :latitude)`,
       {
@@ -913,10 +894,6 @@ async function getLocationData(longitude, latitude) {
     }).map(result => new Location(result));
 
     return locations && locations.length > 0 ? locations[0] : null;
-  } catch (error) {
-    console.error('Error executing function:', error);
-    throw error;
-  }
 }
 
 /**
@@ -933,7 +910,6 @@ async function getLocationData(longitude, latitude) {
  * @throws {Error} If there is an error executing the database function.
  */
 async function getStatesByCountryCode(countryCode) {
-  try {
     const results = await sequelize.query(
       `SELECT * FROM mra_function_get_states_by_country_code(:country_iso_code)`,
       {
@@ -944,10 +920,6 @@ async function getStatesByCountryCode(countryCode) {
 
     // Return the results directly, as they are already in the desired format
     return results;
-  } catch (error) {
-    console.error('Error executing function:', error);
-    throw error;
-  }
 }
 
 /**
@@ -964,7 +936,6 @@ async function getStatesByCountryCode(countryCode) {
  * @throws {Error} If there is an error executing the database function.
  */
 async function getStatesByCountryId(countryId) {
-  try {
     const results = await sequelize.query(
       `SELECT * FROM mra_function_get_states_by_country_id(:country_id)`,
       {
@@ -975,10 +946,6 @@ async function getStatesByCountryId(countryId) {
 
     // Return the results directly, as they are already in the desired format
     return results;
-  } catch (error) {
-    console.error('Error executing function:', error);
-    throw error;
-  }
 }
 
 
@@ -997,7 +964,6 @@ async function getStatesByCountryId(countryId) {
  * @throws {Error} If there is an error executing the database function.
  */
 async function getCitiesByState(countryId, stateId) {
-  try {
     const results = await sequelize.query(
       `SELECT * FROM mra_function_get_cities_by_state(:country_id, :state_id)`,
       {
@@ -1008,10 +974,6 @@ async function getCitiesByState(countryId, stateId) {
 
     // Return the results directly, as they are already in the desired format
     return results;
-  } catch (error) {
-    console.error('Error executing function:', error);
-    throw error;
-  }
 }
 
 
