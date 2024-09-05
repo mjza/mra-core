@@ -28,6 +28,28 @@ describe('Test DB functions', () => {
         await db.closeDBConnections();
     });
 
+    describe('getUserByUsername', () => {
+        it('should return the correct user for a valid username', async () => {
+            const result = await db.getUserByUsername(mockUser.username);
+    
+            expect(result).toBeDefined();
+            expect(result.username).toBe(mockUser.username.toLowerCase());
+            expect(result.email).toBe(mockUser.email); // Assuming email is part of the user object
+        });
+    
+        it('should return null for an invalid or non-existent username', async () => {
+            const result = await db.getUserByUsername('nonexistentuser');
+    
+            expect(result).toBeNull();
+        });
+    
+        it('should return null for empty or whitespace-only username', async () => {
+            const result = await db.getUserByUsername('   ');
+    
+            expect(result).toBeNull();
+        });
+    });
+
     describe('Test addDateRangeFilter', () => {
 
         let where;
