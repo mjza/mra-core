@@ -66,7 +66,7 @@ describe('/user_details endpoints', () => {
             expect(item.middleName).toBeNull();
             expect(item.lastName).toBeNull();
             expect(item.genderId).toBeNull();
-            expect(item.gender).not.toBeDefined();
+            expect(item.gender).toBeNull();
             expect(item.dateOfBirth).toBeNull();
             expect(item.profilePictureUrl).toBeNull();
             expect(item.isPrivatePicture).toBeNull();
@@ -92,7 +92,7 @@ describe('/user_details endpoints', () => {
             expect(item.middleName).toBeNull();
             expect(item.lastName).toBeNull();
             expect(item.genderId).toBeNull();
-            expect(item.gender).not.toBeDefined();
+            expect(item.gender).toBeNull();
             expect(item.dateOfBirth).toBeNull();
             expect(item.profilePictureUrl).toBe(userDetails.profilePictureUrl);
             expect(item.isPrivatePicture).toBeFalsy();

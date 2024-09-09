@@ -857,7 +857,7 @@ describe('Test DB functions', () => {
                 expect(item.middle_name).toBeNull();
                 expect(item.last_name).toBeNull();
                 expect(item.gender_id).toBeNull();
-                expect(item.gender).not.toBeDefined();
+                expect(item.gender).toBeNull();
                 expect(item.date_of_birth).toBeNull();
                 expect(item.profile_picture_url).toBeNull();
                 expect(item.is_private_picture).toBeNull();
@@ -879,7 +879,7 @@ describe('Test DB functions', () => {
                 expect(result.middle_name).toBeNull();
                 expect(result.last_name).toBeNull();
                 expect(result.gender_id).toBeNull();
-                expect(result.gender).not.toBeDefined();
+                expect(result.gender).toBeNull();
                 expect(result.date_of_birth).toBeNull();
                 expect(result.profile_picture_url).toBeNull();
                 expect(result.is_private_picture).toBeNull();
@@ -893,7 +893,6 @@ describe('Test DB functions', () => {
         describe('Create user details', () => {
             it('should create user details', async () => {
                 const result = await db.createUserDetails(userDetails);
-                console.log(result);
                 expect(result).not.toBeNull();
                 expect(result.user_id).toBe(userDetails.user_id);
                 expect(result.email).toBe(userDetails.email);
