@@ -5,7 +5,7 @@ const { generateMockUserRoute } = require('../../utils/generators');
 
 describe('Test DB functions', () => {
 
-    let mockUser;
+    let mockUser, createdUser, userDetails, where;
 
     const headers = {
         headers: {
@@ -18,9 +18,25 @@ describe('Test DB functions', () => {
         let response = await axios.post(`${process.env.AUTH_SERVER_URL}/v1/register`, mockUser, headers);
         const userId = response.data.userId;
         // Get the test user from the database
-        testUser = await db.getUserByUserId(userId);
-        var inactiveUser = { username: testUser.username, activationCode: testUser.activation_code };
+        createdUser = await db.getUserByUserId(userId);
+        const inactiveUser = { username: createdUser.username, activationCode: createdUser.activation_code };
         await axios.post(`${process.env.AUTH_SERVER_URL}/v1/activate-by-code`, inactiveUser, headers);
+
+        userDetails = {
+            user_id: createdUser.user_id,
+            first_name: 'string1',
+            middle_name: 'string2',
+            last_name: 'string3',
+            display_name: mockUser.username,
+            email: createdUser.email,
+            gender_id: 1,
+            date_of_birth: '2023-12-07',
+            profile_picture_url: 'http://example.com/123',
+            is_private_picture: true,
+            creator: createdUser.user_id
+        };
+
+        where = { user_id: createdUser.user_id };
     });
 
     afterAll(async () => {
@@ -28,24 +44,24 @@ describe('Test DB functions', () => {
         await db.closeDBConnections();
     });
 
-    describe('getUserByUsername', () => {
+    describe('Test getUserByUsername function', () => {
         it('should return the correct user for a valid username', async () => {
             const result = await db.getUserByUsername(mockUser.username);
-    
+
             expect(result).toBeDefined();
             expect(result.username).toBe(mockUser.username.toLowerCase());
             expect(result.email).toBe(mockUser.email); // Assuming email is part of the user object
         });
-    
+
         it('should return null for an invalid or non-existent username', async () => {
             const result = await db.getUserByUsername('nonexistentuser');
-    
+
             expect(result).toBeNull();
         });
-    
+
         it('should return null for empty or whitespace-only username', async () => {
             const result = await db.getUserByUsername('   ');
-    
+
             expect(result).toBeNull();
         });
     });
@@ -749,48 +765,213 @@ describe('Test DB functions', () => {
 
     });
 
-    describe('isPrivateCustomer', () => {
+    describe('Test isPrivateCustomer function', () => {
         it('should return true for customer with id=0', async () => {
             const customerId = 0;
-    
+
             const result = await db.isPrivateCustomer(customerId);
             expect(result).toBe(true); // Assuming customer with id=0 is private
         });
-    
+
         it('should return false for customer with id=1', async () => {
             const customerId = 1;
-    
+
             const result = await db.isPrivateCustomer(customerId);
             expect(result).toBe(false); // Assuming customer with id=1 is not private
         });
-    
+
         it('should return false for negative ids', async () => {
             const customerId = -1;
-    
+
             const result = await db.isPrivateCustomer(customerId);
             expect(result).toBe(false); // Negative customerId should return false
         });
-    
+
         it('should return false for null id', async () => {
             const customerId = null;
-    
+
             const result = await db.isPrivateCustomer(customerId);
             expect(result).toBe(false); // Null customerId should return false
         });
-    
+
         it('should return false for string id', async () => {
             const customerId = 'abc';
-    
+
             const result = await db.isPrivateCustomer(customerId);
             expect(result).toBe(false); // String customerId should return false
         });
-    
+
         it('should return false if customer is not found in the database', async () => {
             const customerId = 999999999999999;
-    
+
             const result = await db.isPrivateCustomer(customerId);
             expect(result).toBe(false); // Large number customerId should return false
         });
     });
-    
+
+    describe('Test user details functions', () => {
+
+        describe('Get user details validation for pagination', () => {
+            it('should return an error when pagination is not provided', async () => {
+                await expect(db.getUserDetails(where, null)).rejects.toThrow('Limit and offset must be valid numbers');
+            });
+
+            it('should return an error when limit is NaN', async () => {
+                const pagination = { limit: 'invalidLimit', offset: 10 };
+                await expect(db.getUserDetails(where, pagination)).rejects.toThrow('Limit and offset must be valid numbers');
+            });
+
+            it('should return an error when offset is NaN', async () => {
+                const pagination = { limit: 10, offset: 'invalidOffset' };
+                await expect(db.getUserDetails(where, pagination)).rejects.toThrow('Limit and offset must be valid numbers');
+            });
+
+            it('should return an error when limit is less than or equal to 0', async () => {
+                const pagination = { limit: 0, offset: 10 };
+                await expect(db.getUserDetails(where, pagination)).rejects.toThrow('Limit and offset must be valid numbers');
+            });
+
+            it('should return an error when offset is less than 0', async () => {
+                const pagination = { limit: 10, offset: -1 };
+                await expect(db.getUserDetails(where, pagination)).rejects.toThrow('Limit and offset must be valid numbers');
+            });
+
+            it('should not throw an error when limit and offset are valid numbers', async () => {
+                const pagination = { limit: 10, offset: 5 };
+                await expect(db.getUserDetails(where, pagination)).resolves.not.toThrow();
+            });
+        });
+
+        describe('Get user details before creation', () => {
+            it('should return a user details with no creator as it has not yet defined', async () => {
+                const pagination = { limit: 100, offset: 0 };
+                const result = await db.getUserDetails(where, pagination);
+                expect(result).not.toBeNull();
+                expect(Array.isArray(result)).toBeTruthy();
+                expect(result.length).toBe(1);
+                const item = result[0];
+                expect(item.user_id).toBe(userDetails.user_id);
+                expect(item.email).toBe(userDetails.email);
+                expect(item.display_name).toBe(userDetails.display_name);
+                expect(item.first_name).toBeNull();
+                expect(item.middle_name).toBeNull();
+                expect(item.last_name).toBeNull();
+                expect(item.gender_id).toBeNull();
+                expect(item.gender).not.toBeDefined();
+                expect(item.date_of_birth).toBeNull();
+                expect(item.profile_picture_url).toBeNull();
+                expect(item.is_private_picture).toBeNull();
+                expect(item.creator).toBeNull();
+                expect(item.created_at).toBeNull();
+                expect(item.updator).toBeNull();
+                expect(item.updated_at).toBeNull();
+            });
+        });
+
+        describe('Update user details before creation', () => {
+            it('should return a user details with no creator as it has not yet defined', async () => {
+                const result = await db.updateUserDetails(userDetails, where);
+                expect(result).not.toBeNull();
+                expect(result.user_id).toBe(userDetails.user_id);
+                expect(result.email).toBe(userDetails.email);
+                expect(result.display_name).toBe(userDetails.display_name);
+                expect(result.first_name).toBeNull();
+                expect(result.middle_name).toBeNull();
+                expect(result.last_name).toBeNull();
+                expect(result.gender_id).toBeNull();
+                expect(result.gender).not.toBeDefined();
+                expect(result.date_of_birth).toBeNull();
+                expect(result.profile_picture_url).toBeNull();
+                expect(result.is_private_picture).toBeNull();
+                expect(result.creator).toBeNull();
+                expect(result.created_at).toBeNull();
+                expect(result.updator).toBeNull();
+                expect(result.updated_at).toBeNull();
+            });
+        });
+
+        describe('Create user details', () => {
+            it('should create user details', async () => {
+                const result = await db.createUserDetails(userDetails);
+                console.log(result);
+                expect(result).not.toBeNull();
+                expect(result.user_id).toBe(userDetails.user_id);
+                expect(result.email).toBe(userDetails.email);
+                expect(result.display_name).toBe(userDetails.display_name);
+                expect(result.first_name).toBe(userDetails.first_name);
+                expect(result.middle_name).toBe(userDetails.middle_name);
+                expect(result.last_name).toBe(userDetails.last_name);
+                expect(result.gender_id).toBe(userDetails.gender_id);
+                expect(result.gender.gender_name).toBe('Female');
+                expect(result.date_of_birth).toBe(userDetails.date_of_birth);
+                expect(result.profile_picture_url).toBe(userDetails.profile_picture_url);
+                expect(result.is_private_picture).toBe(userDetails.is_private_picture);
+                expect(result.creator).toBe(userDetails.user_id);
+                expect(result.created_at).toBeDefined();
+                expect(result.updator).toBeNull();
+                expect(result.updated_at).toBeNull();
+            });
+        });
+
+        describe('Get user details after creation', () => {
+            it('should return 200 as user details has been defined already', async () => {
+                const pagination = { limit: 100, offset: 0 };
+                const result = await db.getUserDetails(where, pagination);
+                expect(result).not.toBeNull();
+                expect(Array.isArray(result)).toBeTruthy();
+                expect(result.length).toBe(1);
+                const item = result[0];
+                expect(item.user_id).toBe(userDetails.user_id);
+                expect(item.email).toBe(userDetails.email);
+                expect(item.display_name).toBe(userDetails.display_name);
+                expect(item.first_name).toBe(userDetails.first_name);
+                expect(item.middle_name).toBe(userDetails.middle_name);
+                expect(item.last_name).toBe(userDetails.last_name);
+                expect(item.gender_id).toBe(userDetails.gender_id);
+                expect(item.gender.gender_name).toBe('Female');
+                expect(item.date_of_birth).toBe(userDetails.date_of_birth);
+                expect(item.profile_picture_url).toBe(userDetails.profile_picture_url);
+                expect(item.is_private_picture).toBe(userDetails.is_private_picture);
+                expect(item.creator).toBe(userDetails.user_id);
+                expect(item.created_at).toBeDefined();
+                expect(item.updator).toBeNull();
+                expect(item.updated_at).toBeNull();
+            });
+        });
+
+        describe('Update user details after creation', () => {
+            it('should update user details', async () => {
+
+                userDetails.email += 'a';
+                userDetails.display_name += 'b';
+                userDetails.first_name += 'c';
+                userDetails.middle_name += 'd';
+                userDetails.last_name += 'e';
+                userDetails.gender_id = 2;
+                userDetails.date_of_birth = '2023-12-07';
+                userDetails.profile_picture_url += 'f';
+                userDetails.is_private_picture = !userDetails.is_private_picture;
+                userDetails.updator = userDetails.user_id;
+
+                const result = await db.updateUserDetails(userDetails, where);
+                expect(result).not.toBeNull();
+                expect(result.user_id).toBe(userDetails.user_id);
+                expect(result.email).toBe(userDetails.email);
+                expect(result.display_name).toBe(userDetails.display_name);
+                expect(result.first_name).toBe(userDetails.first_name);
+                expect(result.middle_name).toBe(userDetails.middle_name);
+                expect(result.last_name).toBe(userDetails.last_name);
+                expect(result.gender_id).toBe(userDetails.gender_id);
+                expect(result.gender.gender_name).toBe('Male');
+                expect(result.date_of_birth).toBe(userDetails.date_of_birth);
+                expect(result.profile_picture_url).toBe(userDetails.profile_picture_url);
+                expect(result.is_private_picture).toBe(userDetails.is_private_picture);
+                expect(result.creator).toBe(userDetails.user_id);
+                expect(result.created_at).toBeDefined();
+                expect(result.updator).toBe(userDetails.user_id);
+                expect(result.updated_at).toBeDefined();
+            });
+        });
+
+    });
 });

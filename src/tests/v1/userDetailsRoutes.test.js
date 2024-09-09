@@ -5,7 +5,7 @@ const db = require('../../utils/database');
 const { generateMockUserRoute } = require('../../utils/generators');
 
 describe('/user_details endpoints', () => {
-    let app, mockUser, testUser, authData, userDetails;
+    let app, mockUser, createdUser, authData, userDetails;
 
     const headers = {
         headers: {
@@ -21,8 +21,8 @@ describe('/user_details endpoints', () => {
         let response = await axios.post(`${process.env.AUTH_SERVER_URL}/v1/register`, mockUser, headers);
         const userId = response.data.userId;
         // Get the test user from the database
-        testUser = await db.getUserByUserId(userId);
-        const inactiveUser = { username: testUser.username, activationCode: testUser.activation_code };
+        createdUser = await db.getUserByUserId(userId);
+        const inactiveUser = { username: createdUser.username, activationCode: createdUser.activation_code };
         await axios.post(`${process.env.AUTH_SERVER_URL}/v1/activate-by-code`, inactiveUser);
         const user = { usernameOrEmail: mockUser.username, password: mockUser.password };
         response = await axios.post(`${process.env.AUTH_SERVER_URL}/v1/login`, user, headers);
@@ -30,12 +30,12 @@ describe('/user_details endpoints', () => {
         authData = response.data;
 
         userDetails = {
-            userId: testUser.user_id,
+            userId: createdUser.user_id,
             firstName: 'string1',
             middleName: 'string2',
             lastName: 'string3',
-            displayName: testUser.username,
-            email: testUser.email,
+            displayName: mockUser.username,
+            email: createdUser.email,
             genderId: 1,
             dateOfBirth: '2023-12-07',
             profilePictureUrl: 'http://example.com/123',
@@ -61,7 +61,7 @@ describe('/user_details endpoints', () => {
             const item = res.body.data[0];
             expect(item.userId).toBe(userDetails.userId);
             expect(item.email).toBe(userDetails.email);
-            //expect(item.displayName).toBe(userDetails.displayName);
+            expect(item.displayName).toBe(userDetails.displayName);
             expect(item.firstName).toBeNull();
             expect(item.middleName).toBeNull();
             expect(item.lastName).toBeNull();
@@ -69,7 +69,7 @@ describe('/user_details endpoints', () => {
             expect(item.gender).not.toBeDefined();
             expect(item.dateOfBirth).toBeNull();
             expect(item.profilePictureUrl).toBeNull();
-            expect(item.isPrivatePicture).toBeFalsy();
+            expect(item.isPrivatePicture).toBeNull();
             expect(item.creator).toBeNull();
             expect(item.createdAt).toBeNull();
             expect(item.updator).toBeNull();
@@ -77,12 +77,29 @@ describe('/user_details endpoints', () => {
         });
     });
 
-    describe('PUT /user_details/:userId after creation', () => {
-        it('should return 404 as user details has not yet defined', async () => {
-            const res = await request(app).put(`/v1/user_details/${userDetails.userId}`).send(userDetails).set('Authorization', `Bearer ${authData.token}`);
+    describe('PUT /user_details/:userId before creation', () => {
+        it('should return 206 as user details has not yet defined', async () => {
+            const res = await request(app).put(`/v1/user_details/${userDetails.userId}`).send(userDetails)
+                .set('Authorization', `Bearer ${authData.token}`);
 
-            expect(res.statusCode).toEqual(404);
-            expect(res.body.message).toEqual('There is no record for this user in the user details table.');
+            expect(res.statusCode).toEqual(206);
+            expect(res.body).not.toBeNull();
+            const item = res.body;
+            expect(item.userId).toBe(userDetails.userId);
+            expect(item.email).toBe(userDetails.email);
+            expect(item.displayName).toBe(userDetails.displayName);
+            expect(item.firstName).toBeNull();
+            expect(item.middleName).toBeNull();
+            expect(item.lastName).toBeNull();
+            expect(item.genderId).toBeNull();
+            expect(item.gender).not.toBeDefined();
+            expect(item.dateOfBirth).toBeNull();
+            expect(item.profilePictureUrl).toBe(userDetails.profilePictureUrl);
+            expect(item.isPrivatePicture).toBeFalsy();
+            expect(item.creator).toBeNull();
+            expect(item.createdAt).toBeNull();
+            expect(item.updator).toBeNull();
+            expect(item.updatedAt).toBeNull();
         });
     });
 
@@ -207,7 +224,7 @@ describe('/user_details endpoints', () => {
             userDetails.genderId = 2;
             userDetails.dateOfBirth = '2023-12-08';
             userDetails.profilePictureUrl += 'x';
-            userDetails.isPrivatePicture = true;
+            userDetails.isPrivatePicture = !userDetails.isPrivatePicture;
 
             const res = await request(app).put(`/v1/user_details/${userDetails.userId}`).send(userDetails).set('Authorization', `Bearer ${authData.token}`);
 
@@ -218,7 +235,7 @@ describe('/user_details endpoints', () => {
             expect(res.body.lastName).toBe(userDetails.lastName);
             expect(res.body.genderId).toBe(userDetails.genderId);
             expect(res.body.gender.genderName).toBe('Male');
-            expect(res.body.dateOfBirth).toBe(userDetails.dateOfBirth);
+            expect(res.body.dateOfBirth).toBe(userDetails.dateOfBirth);            
             expect(res.body.profilePictureUrl).toBe(userDetails.profilePictureUrl);
             expect(res.body.isPrivatePicture).toBe(userDetails.isPrivatePicture);
             expect(res.body.creator).toBe(userDetails.userId);

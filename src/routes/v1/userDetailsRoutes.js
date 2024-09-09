@@ -76,19 +76,26 @@ class UserDetails {
  *       type: object
  *       properties:  
  *         userId:
- *           type: integer               
+ *           type: integer   
+ *           example: 1            
  *         firstName:
  *           type: string
+ *           example: "Jorg"
  *         middleName:
  *           type: string
+ *           example: "W."
  *         lastName:
  *           type: string
+ *           example: "Bosch"
  *         displayName:
  *           type: string
+ *           example: "JWB"
  *         email:
  *           type: string
+ *           example: "a@example.com"
  *         genderId:
  *           type: integer
+ *           example: 1
  *         dateOfBirth:
  *           type: string
  *           format: date
@@ -123,6 +130,68 @@ class UserDetails {
  *             genderName:
  *               type: string
  *               example: "Female"
+ *     BeforeCreationUserDetailsObject:
+ *       type: object
+ *       properties:  
+ *         userId:
+ *           type: integer   
+ *           example: 1            
+ *         email:
+ *           type: string
+ *           example: "a@example.com"
+ *         displayName:
+ *           type: string
+ *           example: "abc"
+ *         profilePictureUrl:
+ *           type: string
+ *           nullable: true
+ *           example: null
+ *         isPrivatePicture:
+ *           type: boolean
+ *           nullable: true
+ *           example: null
+ *         firstName:
+ *           type: string
+ *           nullable: true
+ *           example: null
+ *         middleName:
+ *           type: string
+ *           nullable: true
+ *           example: null
+ *         lastName:
+ *           type: string
+ *           nullable: true
+ *           example: null
+ *         genderId:
+ *           type: integer
+ *           nullable: true
+ *           example: null
+ *         dateOfBirth:
+ *           type: string
+ *           format: date
+ *           nullable: true
+ *           example: null
+ *         creator:
+ *           type: integer
+ *           nullable: true
+ *           example: null
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *           example: null
+ *         updator:
+ *           type: integer
+ *           nullable: true
+ *           example: null
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *           example: null
+ *         gender:
+ *           type: object
+ *           example: null
  */
 
 /**
@@ -529,6 +598,12 @@ router.post('/user_details', apiRequestLimiter,
  *           application/json:
  *             schema:
  *               $ref: '#/components/responses/UserDetailsObject'
+ *       206:
+ *         description: Partial user details updated successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/responses/BeforeCreationUserDetailsObject'
  *       400:
  *         description: UserId is required.
  *         content:
@@ -550,17 +625,7 @@ router.post('/user_details', apiRequestLimiter,
  *               properties:
  *                 message:
  *                   type: string
- *                   example: Unauthorized to update details for other users. 
- *       404:
- *         description: Not Found - There is no record in the 'user_details' table.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: There is no record for this user in the user details table.
+ *                   example: Unauthorized to update details for other users.
  *       422:
  *         description: Unprocessable Content.
  *         content:
@@ -670,11 +735,9 @@ router.put('/user_details/:userId', apiRequestLimiter,
       // Copy the array and add a new item
       const newSecretProperties = userDetails.is_private_picture === true ? [...secretProperties, 'profile_picture_url'] : [...secretProperties];
       const updatedUserDetails = await db.updateUserDetails(encryptObjectItems(userDetails, newSecretProperties), req.conditions.where);
-
-      if (!updatedUserDetails) {
-        return res.status(404).json({ message: 'There is no record for this user in the user details table.' });
+      if(!updatedUserDetails.creator){
+        return res.status(206).json(toLowerCamelCase(decryptObjectItems(updatedUserDetails, newSecretProperties)));
       }
-
       return res.status(200).json(toLowerCamelCase(decryptObjectItems(updatedUserDetails, newSecretProperties)));
     } catch (err) {
       updateEventLog(req, err);

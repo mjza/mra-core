@@ -229,7 +229,7 @@ async function getGenderTypes(where, pagination) {
  *                     are available, allowing the caller to determine if additional pages exist.
  */
 async function getUserDetails(where, pagination) {
-  const { limit, offset } = pagination;
+  const { limit, offset } = pagination ?? {};
 
   if (isNaN(limit) || isNaN(offset) || limit <= 0 || offset < 0)
     throw new Error('Limit and offset must be valid numbers');
@@ -265,8 +265,8 @@ async function getUserDetails(where, pagination) {
       if (userDetailPlain.profile_picture_url !== null) {
         userDetailPlain.is_private_picture = false;
       } else {
-        userDetailPlain.profile_picture_url = userDetailPlain.private_profile_picture_url;
-        userDetailPlain.is_private_picture = !!userDetailPlain.profile_picture_url;
+        userDetailPlain.profile_picture_url = userDetailPlain.private_profile_picture_url;        
+        userDetailPlain.is_private_picture = userDetailPlain.profile_picture_url != null ? true : null;
         delete userDetailPlain.private_profile_picture_url;
       }
       return userDetailPlain;
@@ -284,7 +284,7 @@ async function getUserDetails(where, pagination) {
 
     if (userPlain) {
       userPlain.profile_picture_url = userPlain.public_profile_picture_url;
-      userPlain.is_private_picture = false;
+      userPlain.is_private_picture = userPlain.profile_picture_url != null ? false : null;
       delete userPlain.public_profile_picture_url;
       return [{
         ...userPlain,
@@ -296,7 +296,8 @@ async function getUserDetails(where, pagination) {
         creator: null,
         created_at: null,
         updator: null,
-        updated_at: null
+        updated_at: null,
+        gender: null
       }];
     }
   }
@@ -336,14 +337,13 @@ async function storeUserPublicInformation(userDetails, where) {
     },
     {
       where: {
-        // if where exist it means it is a update otherwise a create request
         user_id: where ? where.user_id : userDetails.user_id,
       },
       returning: true,
     }
   );
   if (updateCount < 0) {
-    throw new Error('Couldn\'t store user\'s profile picture url publically.');
+    throw new Error('Couldn\'t store user\'s profile picture, display name or email.');
   }
   delete userDetails.email;
   delete userDetails.display_name;
@@ -405,14 +405,9 @@ class UserDetails {
 async function createUserDetails(userDetails) {
   userDetails = new UserDetails(userDetails);
   userDetails = await storeUserPublicInformation(userDetails);
-  const createdRow = await MraUserDetails.create(userDetails);
-
-  if (createdRow && createdRow.user_id) {
-    const userDetails = await getUserDetails({ user_id: createdRow.user_id }, { limit: 1, offset: 0 });
-    return userDetails && userDetails[0];
-  } else {
-    return null;
-  }
+  await MraUserDetails.create(userDetails);
+  const results = await getUserDetails({ user_id: userDetails.user_id }, { limit: 1, offset: 0 });
+  return results && results[0];
 }
 
 /**
@@ -425,14 +420,9 @@ async function createUserDetails(userDetails) {
 async function updateUserDetails(userDetails, where) {
   userDetails = new UserDetails(userDetails);
   userDetails = await storeUserPublicInformation(userDetails, where);
-  const [affectedRowCount] = await MraUserDetails.update(userDetails, { where });
-
-  if (affectedRowCount > 0) {
-    const userDetails = await getUserDetails(where, { limit: 1, offset: 0 });
-    return userDetails && userDetails[0];
-  } else {
-    return null;
-  }
+  await MraUserDetails.update(userDetails, { where });
+  const results = await getUserDetails(where, { limit: 1, offset: 0 });
+  return results && results[0];
 }
 
 /**
