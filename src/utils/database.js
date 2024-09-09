@@ -350,6 +350,52 @@ async function storeUserPublicInformation(userDetails, where) {
   return userDetails;
 }
 
+class UserDetails {
+  /**
+   * Constructor for creating a userDetails object.
+   * Only allows specific properties to ensure security by eliminating extra or unwanted properties.
+   * @param {Object} userDetails - Object containing user details.
+   * @param {number} userDetails.user_id - User ID of the detail owner. 
+   * @param {string} userDetails.first_name - First name of the user.
+   * @param {string} [userDetails.middle_name] - Middle name of the user (optional).
+   * @param {string} userDetails.last_name - Last name of the user.
+   * @param {string} userDetails.display_name - Display name of the user.
+   * @param {string} userDetails.email - Email of the user.
+   * @param {number} userDetails.gender_id - Gender ID of the user.
+   * @param {string} userDetails.date_of_birth - Date of birth of the user.
+   * @param {string} userDetails.profile_picture_url - Profile picture URL of the user.
+   * @param {boolean} [userDetails.is_private_picture] - Whether the profile picture is private (optional, default is false).
+   */
+  constructor({
+    user_id,
+    first_name,
+    middle_name,
+    last_name,
+    display_name,
+    email,
+    gender_id,
+    date_of_birth,
+    profile_picture_url,
+    is_private_picture,
+    creator,
+    updator
+  }) {
+    // Explicitly assigning only known properties to avoid security issues from extra properties
+    this.user_id = user_id;
+    this.first_name = first_name;
+    this.middle_name = middle_name;
+    this.last_name = last_name;
+    this.display_name = display_name;
+    this.email = email;
+    this.gender_id = gender_id;
+    this.date_of_birth = date_of_birth;
+    this.profile_picture_url = profile_picture_url;
+    this.is_private_picture = is_private_picture;
+    this.creator = creator;
+    this.updator = updator;
+  }
+}
+
 /**
  * Creates new user details in the database.
  *
@@ -357,7 +403,7 @@ async function storeUserPublicInformation(userDetails, where) {
  * @returns {Object} The created user details object.
  */
 async function createUserDetails(userDetails) {
-
+  userDetails = new UserDetails(userDetails);
   userDetails = await storeUserPublicInformation(userDetails);
   const createdRow = await MraUserDetails.create(userDetails);
 
@@ -376,7 +422,8 @@ async function createUserDetails(userDetails) {
  * @param {Object} userDetails - The new user details object.
  * @returns {Object} The updated user details object.
  */
-async function updateUserDetails(where, userDetails) {
+async function updateUserDetails(userDetails, where) {
+  userDetails = new UserDetails(userDetails);
   userDetails = await storeUserPublicInformation(userDetails, where);
   const [affectedRowCount] = await MraUserDetails.update(userDetails, { where });
 

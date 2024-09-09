@@ -26,6 +26,48 @@ const secretProperties = [
   'date_of_birth'
 ];
 
+class UserDetails {
+  /**
+   * Constructor for creating a userDetails object.
+   * Only allows specific properties to ensure security by eliminating extra or unwanted properties.
+   * @param {Object} userDetails - Object containing user details.
+   * @param {number} userDetails.userId - User ID of the detail owner. 
+   * @param {string} userDetails.firstName - First name of the user.
+   * @param {string} [userDetails.middleName] - Middle name of the user.
+   * @param {string} userDetails.lastName - Last name of the user.
+   * @param {string} userDetails.displayName - Display name of the user.
+   * @param {string} userDetails.email - Email of the user.
+   * @param {number} userDetails.genderId - Gender ID of the user.
+   * @param {string} userDetails.dateOfBirth - Date of birth of the user.
+   * @param {string} userDetails.profilePictureUrl - Profile picture URL of the user.
+   * @param {boolean} [userDetails.isPrivatePicture] - Whether the profile picture is private.
+   */
+  constructor({
+    userId,
+    firstName,
+    middleName,
+    lastName,
+    displayName,
+    email,
+    genderId,
+    dateOfBirth,
+    profilePictureUrl,
+    isPrivatePicture
+  }) {
+    // Explicitly assigning only known properties to avoid security issues from extra properties
+    this.userId = userId;
+    this.firstName = firstName;
+    this.middleName = middleName;
+    this.lastName = lastName;
+    this.displayName = displayName;
+    this.email = email;
+    this.genderId = genderId;
+    this.dateOfBirth = dateOfBirth;
+    this.profilePictureUrl = profilePictureUrl;
+    this.isPrivatePicture = isPrivatePicture;
+  }
+}
+
 /**
  * @swagger
  * components:
@@ -386,7 +428,8 @@ router.post('/user_details', apiRequestLimiter,
   ],
   checkRequestValidity,
   (req, res, next) => {
-    const processedBody = toSnakeCase(req.body);
+    const body = req.body;
+    const processedBody = toSnakeCase(new UserDetails(body));
     const middleware = authorizeUser({ dom: '0', obj: 'mra_user_details', act: 'C', attrs: { set: processedBody } });
     middleware(req, res, next);
   },
@@ -608,7 +651,8 @@ router.put('/user_details/:userId', apiRequestLimiter,
   ],
   checkRequestValidity,
   (req, res, next) => {
-    const processedBody = toSnakeCase(req.body);
+    const body = req.body;
+    const processedBody = toSnakeCase(new UserDetails(body));
     const middleware = authorizeUser({ dom: '0', obj: 'mra_user_details', act: 'U', attrs: { where: { user_id: parseInt(req.params.userId, 10) }, set: processedBody } });
     middleware(req, res, next);
   },
@@ -625,7 +669,7 @@ router.put('/user_details/:userId', apiRequestLimiter,
 
       // Copy the array and add a new item
       const newSecretProperties = userDetails.is_private_picture === true ? [...secretProperties, 'profile_picture_url'] : [...secretProperties];
-      const updatedUserDetails = await db.updateUserDetails(req.conditions.where, encryptObjectItems(userDetails, newSecretProperties));
+      const updatedUserDetails = await db.updateUserDetails(encryptObjectItems(userDetails, newSecretProperties), req.conditions.where);
 
       if (!updatedUserDetails) {
         return res.status(404).json({ message: 'There is no record for this user in the user details table.' });
