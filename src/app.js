@@ -3,6 +3,9 @@ require('dotenv').config({
 });
 const localhost = 'http://localhost:3100';
 const express = require('express');
+const i18next = require('i18next');
+const i18nextMiddleware = require('i18next-http-middleware');
+const Backend = require('i18next-fs-backend');
 const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
 const cors = require('cors');
@@ -37,6 +40,30 @@ const v1Routes = require('./routes/v1/routes');
 async function createApp() {
 
     const app = express();
+
+    // Use the environment variable to define supported languages
+    const supportedLanguages = process.env.SUPPORTED_LANG ? process.env.SUPPORTED_LANG.split(',') : ['en'];
+
+
+    // Apply i18next middleware before defining routes
+    i18next
+        .use(Backend) // Use file-based translations
+        .use(i18nextMiddleware.LanguageDetector) // Detect language from query, cookies, headers, etc.
+        .init({
+            fallbackLng: 'en', // Fallback language if no language is detected
+            preload: supportedLanguages, // Preload languages
+            backend: {
+                loadPath: path.join(__dirname, 'locales/{{lng}}.json'), // Path to translation files
+            },
+            detection: {
+                order: ['querystring', 'cookie', 'header'], // Detect language from query parameters, cookies, or headers
+                caches: ['cookie'], // Cache the language in cookies
+                lookupQuerystring: 'lang', // Ensure i18n is looking for the 'lang' query parameter
+            },
+        });
+
+    // Initialize i18next middleware BEFORE defining routes
+    app.use(i18nextMiddleware.handle(i18next));
 
     // When the Express app is behind a reverse proxy, the X-Forwarded-For header is used to 
     // identify the original IP address of the client connecting to the app through the proxy. 
@@ -96,7 +123,7 @@ async function createApp() {
     const activateSwagger = ['true', '1', 'yes'].includes(process.env.ACTIVATE_SWAGGER ? process.env.ACTIVATE_SWAGGER.toLowerCase() : '');
 
     // Conditionally include Swagger UI middleware based on environment
-    if (process.env.NODE_ENV !== 'production' || activateSwagger ) {
+    if (process.env.NODE_ENV !== 'production' || activateSwagger) {
 
         // Swagger definition
         const swaggerDefinition = {
@@ -120,6 +147,19 @@ async function createApp() {
                         bearerFormat: 'JWT',
                     },
                 },
+                parameters: {
+                    lang: {
+                      in: 'query',
+                      name: 'lang',
+                      required: false,
+                      schema: {
+                        type: 'string',
+                        enum: supportedLanguages,
+                        default: 'en',
+                      },
+                      description: 'Language for the response messages',
+                    },
+                  },
             },
             tags: [
                 { name: '1st', description: 'Lookup Tables' },
@@ -157,7 +197,7 @@ async function createApp() {
             customSiteTitle: "Core API"
         }));
     }
-    
+
     // Serve static files from 'public' directory
     app.use(express.static(path.join(__dirname, 'public')));
 

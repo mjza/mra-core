@@ -204,6 +204,7 @@ class UserDetails {
  *     security:
  *       - bearerAuth: []
  *     parameters:
+ *       - $ref: '#/components/parameters/lang'
  *       - in: query
  *         name: userId
  *         required: false
@@ -260,18 +261,18 @@ router.get('/user_details', apiRequestLimiter,
   [
     query('userId')
       .optional({ checkFalsy: true })
-      .isNumeric().withMessage('User ID must be a number.')
-      .toInt({ min: 1 }).withMessage('User ID must be a positive integer'),
+      .isNumeric().withMessage((_, { req }) => req.t('User ID must be a number.'))
+      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('User ID must be a positive integer.')),
     
     query('page')
       .optional()
-      .isInt({ min: 1 }).withMessage('Page must be a positive integer')
+      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('Page must be a positive integer'))
       .toInt()
       .default(1),  
 
     query('limit')
       .optional()
-      .isInt({ min: 1, max: 100 }).withMessage('Limit must be a positive integer and no more than 100')
+      .isInt({ min: 1, max: 100 }).withMessage((_, { req }) => req.t('Limit must be a positive integer and no more than 100'))
       .toInt()
       .default(30),
   ],
@@ -293,11 +294,11 @@ router.get('/user_details', apiRequestLimiter,
   },
   async (req, res) => {
     try {
-      
+
       const userDetailsArray = await db.getUserDetails(req.conditions.where, req.pagination);
       
       if (!userDetailsArray || userDetailsArray.length === 0) {
-        return res.status(404).json({ message: 'User details not found' });
+        return res.status(404).json({ message: req.t('User details not found') });
       }
 
       // Determine if there are more items beyond the current page
@@ -327,6 +328,8 @@ router.get('/user_details', apiRequestLimiter,
  *     tags: [2nd]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/lang'
  *     requestBody:
  *       required: true
  *       content:
@@ -429,71 +432,71 @@ router.post('/user_details', apiRequestLimiter,
   [
     body('userId')
       .notEmpty()
-      .withMessage('User ID is required.')
+      .withMessage((_, { req }) => req.t('User ID is required.'))
       .isInt({ gt: 0 })
-      .withMessage('User ID must be an integer greater than 0.'),
+      .withMessage((_, { req }) => req.t('User ID must be an integer greater than 0.')),
 
     body('firstName')
       .optional({ nullable: true })
       .isString()
-      .withMessage('First name must be a string.')
+      .withMessage((_, { req }) => req.t('First name must be a string.'))
       .isLength({ max: 255 })
-      .withMessage('First name must not exceed 255 characters.'),
+      .withMessage((_, { req }) => req.t('First name must not exceed 255 characters.')),
 
     body('middleName')
       .optional({ nullable: true })
       .isString()
-      .withMessage('Middle name must be a string.')
+      .withMessage((_, { req }) => req.t('Middle name must be a string.'))
       .isLength({ max: 255 })
-      .withMessage('Middle name must not exceed 255 characters.'),
+      .withMessage((_, { req }) => req.t('Middle name must not exceed 255 characters.')),
 
     body('lastName')
       .optional({ nullable: true })
       .isString()
-      .withMessage('Last name must be a string.')
+      .withMessage((_, { req }) => req.t('Last name must be a string.'))
       .isLength({ max: 255 })
-      .withMessage('Last name must not exceed 255 characters.'),
+      .withMessage((_, { req }) => req.t('Last name must not exceed 255 characters.')),
 
     body('displayName')
       .optional({ nullable: true })
       .isString()
-      .withMessage('Display name must be a string.')
+      .withMessage((_, { req }) => req.t('Display name must be a string.'))
       .isLength({ max: 255 })
-      .withMessage('Display name must not exceed 255 characters.'),
+      .withMessage((_, { req }) => req.t('Display name must not exceed 255 characters.')),
 
     body('email')
       .isEmail()
-      .withMessage('Invalid email address.')
+      .withMessage((_, { req }) => req.t('Invalid email address.'))
       .isLength({ min: 5, max: 255 })
-      .withMessage('Email must be between 5 and 255 characters.'),
+      .withMessage((_, { req }) => req.t('Email must be between 5 and 255 characters.')),
 
     body('genderId')
       .optional({ nullable: true })
       .isInt({ min: 0, max: 9 })
-      .withMessage('Gender ID must be an integer between 0 and 9, inclusive.'),
+      .withMessage((_, { req }) => req.t('Gender ID must be an integer between 0 and 9, inclusive.')),
 
     body('dateOfBirth')
       .optional({ nullable: true })
       .matches(/^\d{4}-\d{2}-\d{2}$/, 'i')
-      .withMessage('Date of birth must be in YYYY-MM-DD format.')
+      .withMessage((_, { req }) => req.t('Date of birth must be in YYYY-MM-DD format.'))
       .custom(value => {
         return moment(value, 'YYYY-MM-DD', true).isValid();
       })
-      .withMessage('Date of birth must be a valid date.'),
+      .withMessage((_, { req }) => req.t('Date of birth must be a valid date.')),
 
     body('profilePictureUrl')
       .optional({ nullable: true })
       .isString()
-      .withMessage('Private profile picture URL must be a string.')
+      .withMessage((_, { req }) => req.t('Private profile picture URL must be a string.'))
       .isURL()
-      .withMessage('Private profile picture URL must be a valid URL.')
+      .withMessage((_, { req }) => req.t('Private profile picture URL must be a valid URL.'))
       .isLength({ max: 255 })
-      .withMessage('Private profile picture URL must not exceed 255 characters.'),
+      .withMessage((_, { req }) => req.t('Private profile picture URL must not exceed 255 characters.')),
 
     body('isPrivatePicture')
       .optional({ nullable: true })
       .isBoolean()
-      .withMessage('isPrivatePicture must be a boolean.'),
+      .withMessage((_, { req }) => req.t('isPrivatePicture must be a boolean.')),
   ],
   checkRequestValidity,
   (req, res, next) => {
@@ -522,17 +525,17 @@ router.post('/user_details', apiRequestLimiter,
       const errorCode = err.original?.code;
 
       if (errorCode === '23505') { // PostgreSQL foreign key violation error code
-        return res.status(422).json({ message: 'A record exists for the current user in the user details table.', details: err.message });
+        return res.status(422).json({ message: req.t('A record exists for the current user in the user details table.'), details: err.message });
       }
 
       if (errorCode === '23503') { // PostgreSQL foreign key violation error code
-        return res.status(422).json({ message: 'Invalid foreign key value.', details: err.message });
+        return res.status(422).json({ message: req.t('Invalid foreign key value.'), details: err.message });
       }
 
       // Handle other types of errors (e.g., validation errors from Sequelize)
       if (err.name === 'SequelizeValidationError') {
         // Map through err.errors for detailed messages or handle collectively
-        const message = 'Validation error occurred.';
+        const message = req.t('Validation error occurred.');
         return res.status(400).json({ message, details: err.errors.map(e => e.message) });
       }
 
@@ -551,6 +554,7 @@ router.post('/user_details', apiRequestLimiter,
  *     security:
  *       - bearerAuth: []
  *     parameters:
+ *       - $ref: '#/components/parameters/lang'
  *       - in: path
  *         name: userId
  *         required: true
@@ -648,71 +652,71 @@ router.put('/user_details/:userId', apiRequestLimiter,
   [
     param('userId')
       .exists()
-      .withMessage('UserId is required.')
+      .withMessage((_, { req }) => req.t('UserId is required.'))
       .matches(/^[\d]+$/)
-      .withMessage('UserId must be a number.'),
+      .withMessage((_, { req }) => req.t('UserId must be a number.')),
 
     body('firstName')
       .optional({ nullable: true })
       .isString()
-      .withMessage('First name must be a string.')
+      .withMessage((_, { req }) => req.t('First name must be a string.'))
       .isLength({ max: 255 })
-      .withMessage('First name must not exceed 255 characters.'),
+      .withMessage((_, { req }) => req.t('First name must not exceed 255 characters.')),
 
     body('middleName')
       .optional({ nullable: true })
       .isString()
-      .withMessage('Middle name must be a string.')
+      .withMessage((_, { req }) => req.t('Middle name must be a string.'))
       .isLength({ max: 255 })
-      .withMessage('Middle name must not exceed 255 characters.'),
+      .withMessage((_, { req }) => req.t('Middle name must not exceed 255 characters.')),
 
     body('lastName')
       .optional({ nullable: true })
       .isString()
-      .withMessage('Last name must be a string.')
+      .withMessage((_, { req }) => req.t('Last name must be a string.'))
       .isLength({ max: 255 })
-      .withMessage('Last name must not exceed 255 characters.'),
+      .withMessage((_, { req }) => req.t('Last name must not exceed 255 characters.')),
 
     body('displayName')
       .optional({ nullable: true })
       .isString()
-      .withMessage('Display name must be a string.')
+      .withMessage((_, { req }) => req.t('Display name must be a string.'))
       .isLength({ max: 255 })
-      .withMessage('Display name must not exceed 255 characters.'),
+      .withMessage((_, { req }) => req.t('Display name must not exceed 255 characters.')),
 
     body('email')
       .isEmail()
-      .withMessage('Invalid email address.')
+      .withMessage((_, { req }) => req.t('Invalid email address.'))
       .isLength({ min: 5, max: 255 })
-      .withMessage('Email must be between 5 and 255 characters.'),  
+      .withMessage((_, { req }) => req.t('Email must be between 5 and 255 characters.')),  
 
     body('genderId')
       .optional({ nullable: true })
       .isInt({ min: 0, max: 9 })
-      .withMessage('Gender ID must be an integer between 0 and 9, inclusive.'),
+      .withMessage((_, { req }) => req.t('Gender ID must be an integer between 0 and 9, inclusive.')),
 
     body('dateOfBirth')
       .optional({ nullable: true })
       .matches(/^\d{4}-\d{2}-\d{2}$/, 'i')
-      .withMessage('Date of birth must be in YYYY-MM-DD format.')
+      .withMessage((_, { req }) => req.t('Date of birth must be in YYYY-MM-DD format.'))
       .custom(value => {
         return moment(value, 'YYYY-MM-DD', true).isValid();
       })
-      .withMessage('Date of birth must be a valid date.'),
+      .withMessage((_, { req }) => req.t('Date of birth must be a valid date.')),
 
     body('profilePictureUrl')
       .optional({ nullable: true })
       .isString()
-      .withMessage('Private profile picture URL must be a string.')
+      .withMessage((_, { req }) => req.t('Private profile picture URL must be a string.'))
       .isURL()
-      .withMessage('Private profile picture URL must be a valid URL.')
+      .withMessage((_, { req }) => req.t('Private profile picture URL must be a valid URL.'))
       .isLength({ max: 255 })
-      .withMessage('Private profile picture URL must not exceed 255 characters.'),
+      .withMessage((_, { req }) => req.t('Private profile picture URL must not exceed 255 characters.')),
 
     body('isPrivatePicture')
       .optional({ nullable: true })
       .isBoolean()
-      .withMessage('isPrivatePicture must be a boolean.'),
+      .withMessage((_, { req }) => req.t('isPrivatePicture must be a boolean.')),
   ],
   checkRequestValidity,
   (req, res, next) => {
@@ -743,7 +747,7 @@ router.put('/user_details/:userId', apiRequestLimiter,
       updateEventLog(req, err);
 
       if (err.code === '23503') { // PostgreSQL foreign key violation error code
-        return res.status(422).json({ message: 'Invalid foreign key value.', details: err.message });
+        return res.status(422).json({ message: req.t('Invalid foreign key value.'), details: err.message });
       }
 
       return res.status(500).json({ message: err.message });
