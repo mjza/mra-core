@@ -3,6 +3,7 @@ const { query } = require('express-validator');
 const db = require('../../utils/database');
 const { apiRequestLimiter } = require('../../utils/rateLimit');
 const { toLowerCamelCase } = require('../../utils/converters');
+const { updateEventLog } = require('../../utils/logger');
 const { authorizeUser, checkRequestValidity } = require('../../utils/validations');
 
 const router = express.Router();
@@ -17,6 +18,7 @@ const router = express.Router();
  *     security:
  *       - bearerAuth: []
  *     parameters:
+ *       - $ref: '#/components/parameters/lang'
  *       - in: query
  *         name: page
  *         required: false
@@ -80,13 +82,13 @@ router.get('/gender_types', apiRequestLimiter,
   [
     query('page')
       .optional()
-      .isInt({ min: 1 }).withMessage('Page must be a positive integer')
+      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('Page must be a positive integer.'))
       .toInt()
       .default(1),  
 
     query('limit')
       .optional()
-      .isInt({ min: 1, max: 100 }).withMessage('Limit must be a positive integer and no more than 100')
+      .isInt({ min: 1, max: 100 }).withMessage((_, { req }) => req.t('Limit must be a positive integer and no more than 100.'))
       .toInt()
       .default(30),
   ],
@@ -109,7 +111,7 @@ router.get('/gender_types', apiRequestLimiter,
       const genderTypesArray = await db.getGenderTypes({}, req.pagination);
 
       if (!genderTypesArray || genderTypesArray.length === 0) {
-        return res.status(404).json({ message: 'Gender types not found' });
+        return res.status(404).json({ message: req.t('Gender types not found.') });
       }
 
       // Determine if there are more items beyond the current page
@@ -118,7 +120,7 @@ router.get('/gender_types', apiRequestLimiter,
 
       return res.json({ data: results.map(item => toLowerCamelCase(item)), hasMore });
     } catch (err) {
-      console.error('Error fetching gender types:', err);
+      updateEventLog(req, err);
       return res.status(500).json({ message: err.message });
     }
   }
@@ -134,6 +136,7 @@ router.get('/gender_types', apiRequestLimiter,
  *     security:
  *       - bearerAuth: []
  *     parameters:
+ *       - $ref: '#/components/parameters/lang'
  *       - in: query
  *         name: ticketTitle
  *         required: false
@@ -157,13 +160,13 @@ router.get('/gender_types', apiRequestLimiter,
  *         required: false
  *         schema:
  *           type: integer
- *         description: Customer ID for filtering ticket categories. This filter is combined with customerTypeId using an 'OR' condition.
+ *         description: CustomerId for filtering ticket categories. This filter is combined with customerTypeId using an 'OR' condition.
  *       - in: query
  *         name: customerTypeId
  *         required: false
  *         schema:
  *           type: integer
- *         description: Customer Type ID for filtering ticket categories. This filter is combined with customerId using an 'OR' condition.
+ *         description: CustomerTypeId for filtering ticket categories. This filter is combined with customerId using an 'OR' condition.
  *       - in: query
  *         name: page
  *         required: false
@@ -227,37 +230,37 @@ router.get('/ticket_categories', apiRequestLimiter,
   [
     query('ticketTitle')
       .optional({ checkFalsy: true })
-      .isString().withMessage('Ticket title must be a string'),
+      .isString().withMessage((_, { req }) => req.t('Ticket title must be a string.')),
     
     query('longitude')
       .optional()
-      .isFloat({ min: -180, max: 180 }).withMessage('Longitude must be a number between -180 and 180')
+      .isFloat({ min: -180, max: 180 }).withMessage((_, { req }) => req.t('Longitude must be a number between -180 and 180.'))
       .toFloat(),
   
     query('latitude')
       .optional()
-      .isFloat({ min: -90, max: 90 }).withMessage('Latitude must be a number between -90 and 90')
+      .isFloat({ min: -90, max: 90 }).withMessage((_, { req }) => req.t('Latitude must be a number between -90 and 90.'))
       .toFloat(),
 
     query('customerId')
       .optional({ checkFalsy: true })
-      .isNumeric().withMessage('Customer ID must be a number')
-      .toInt({ min: 1 }).withMessage('Customer ID must be a positive integer'),
+      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('CustomerId must be a positive integer.'))
+      .toInt(),
 
     query('customerTypeId')
       .optional({ checkFalsy: true })
-      .isNumeric().withMessage('Customer Type ID must be a number')
-      .toInt({ min: 1 }).withMessage('Customer Type ID must be a positive integer'),  
+      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('CustomerTypeId must be a positive integer.'))
+      .toInt(),  
 
     query('page')
       .optional()
-      .isInt({ min: 1 }).withMessage('Page must be a positive integer')
+      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('Page must be a positive integer.'))
       .toInt()
       .default(1),  
 
     query('limit')
       .optional()
-      .isInt({ min: 1, max: 100 }).withMessage('Limit must be a positive integer and no more than 100')
+      .isInt({ min: 1, max: 100 }).withMessage((_, { req }) => req.t('Limit must be a positive integer and no more than 100.'))
       .toInt()
       .default(30),
   ],
@@ -284,7 +287,7 @@ router.get('/ticket_categories', apiRequestLimiter,
       const ticketCategoriesArray = await db.getTicketCategories(ticketTitle, latitude, longitude, customerId, customerTypeId, req.pagination);
 
       if (!ticketCategoriesArray || ticketCategoriesArray.length === 0) {
-        return res.status(404).json({ message: 'Ticket categories not found' });
+        return res.status(404).json({ message: 'Ticket categories not found.' });
       }
 
       // Determine if there are more items beyond the current page
@@ -293,7 +296,7 @@ router.get('/ticket_categories', apiRequestLimiter,
 
       return res.json({ data: results.map(item => toLowerCamelCase(item)), hasMore });
     } catch (err) {
-      console.error('Error fetching ticket categories:', err);
+      updateEventLog(req, err);
       return res.status(500).json({ message: err.message });
     }
   }

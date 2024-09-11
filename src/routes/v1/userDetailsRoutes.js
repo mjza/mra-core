@@ -31,13 +31,13 @@ class UserDetails {
    * Constructor for creating a userDetails object.
    * Only allows specific properties to ensure security by eliminating extra or unwanted properties.
    * @param {Object} userDetails - Object containing user details.
-   * @param {number} userDetails.userId - User ID of the detail owner. 
+   * @param {number} userDetails.userId - UserId of the detail owner. 
    * @param {string} userDetails.firstName - First name of the user.
    * @param {string} [userDetails.middleName] - Middle name of the user.
    * @param {string} userDetails.lastName - Last name of the user.
    * @param {string} userDetails.displayName - Display name of the user.
    * @param {string} userDetails.email - Email of the user.
-   * @param {number} userDetails.genderId - Gender ID of the user.
+   * @param {number} userDetails.genderId - GenderId of the user.
    * @param {string} userDetails.dateOfBirth - Date of birth of the user.
    * @param {string} userDetails.profilePictureUrl - Profile picture URL of the user.
    * @param {boolean} [userDetails.isPrivatePicture] - Whether the profile picture is private.
@@ -210,7 +210,7 @@ class UserDetails {
  *         required: false
  *         schema:
  *           type: integer
- *         description: Optional user ID to retrieve details for a specific user.
+ *         description: Optional userId to retrieve details for a specific user.
  *       - in: query
  *         name: page
  *         required: false
@@ -261,18 +261,18 @@ router.get('/user_details', apiRequestLimiter,
   [
     query('userId')
       .optional({ checkFalsy: true })
-      .isNumeric().withMessage((_, { req }) => req.t('User ID must be a number.'))
-      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('User ID must be a positive integer.')),
+      .isNumeric().withMessage((_, { req }) => req.t('UserId must be a number.'))
+      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('UserId must be a positive integer.')),
     
     query('page')
       .optional()
-      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('Page must be a positive integer'))
+      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('Page must be a positive integer.'))
       .toInt()
       .default(1),  
 
     query('limit')
       .optional()
-      .isInt({ min: 1, max: 100 }).withMessage((_, { req }) => req.t('Limit must be a positive integer and no more than 100'))
+      .isInt({ min: 1, max: 100 }).withMessage((_, { req }) => req.t('Limit must be a positive integer and no more than 100.'))
       .toInt()
       .default(30),
   ],
@@ -298,7 +298,7 @@ router.get('/user_details', apiRequestLimiter,
       const userDetailsArray = await db.getUserDetails(req.conditions.where, req.pagination);
       
       if (!userDetailsArray || userDetailsArray.length === 0) {
-        return res.status(404).json({ message: req.t('User details not found') });
+        return res.status(404).json({ message: req.t('User details not found.') });
       }
 
       // Determine if there are more items beyond the current page
@@ -432,37 +432,37 @@ router.post('/user_details', apiRequestLimiter,
   [
     body('userId')
       .notEmpty()
-      .withMessage((_, { req }) => req.t('User ID is required.'))
+      .withMessage((_, { req }) => req.t('UserId is required.'))
       .isInt({ gt: 0 })
-      .withMessage((_, { req }) => req.t('User ID must be an integer greater than 0.')),
+      .withMessage((_, { req }) => req.t('UserId must be an integer greater than 0.')),
 
     body('firstName')
       .optional({ nullable: true })
       .isString()
-      .withMessage((_, { req }) => req.t('First name must be a string.'))
+      .withMessage((_, { req }) => req.t('FirstName must be a string.'))
       .isLength({ max: 255 })
-      .withMessage((_, { req }) => req.t('First name must not exceed 255 characters.')),
+      .withMessage((_, { req }) => req.t('FirstName must not exceed 255 characters.')),
 
     body('middleName')
       .optional({ nullable: true })
       .isString()
-      .withMessage((_, { req }) => req.t('Middle name must be a string.'))
+      .withMessage((_, { req }) => req.t('MiddleName must be a string.'))
       .isLength({ max: 255 })
-      .withMessage((_, { req }) => req.t('Middle name must not exceed 255 characters.')),
+      .withMessage((_, { req }) => req.t('MiddleName must not exceed 255 characters.')),
 
     body('lastName')
       .optional({ nullable: true })
       .isString()
-      .withMessage((_, { req }) => req.t('Last name must be a string.'))
+      .withMessage((_, { req }) => req.t('LastName must be a string.'))
       .isLength({ max: 255 })
-      .withMessage((_, { req }) => req.t('Last name must not exceed 255 characters.')),
+      .withMessage((_, { req }) => req.t('LastName must not exceed 255 characters.')),
 
     body('displayName')
       .optional({ nullable: true })
       .isString()
-      .withMessage((_, { req }) => req.t('Display name must be a string.'))
+      .withMessage((_, { req }) => req.t('DisplayName must be a string.'))
       .isLength({ max: 255 })
-      .withMessage((_, { req }) => req.t('Display name must not exceed 255 characters.')),
+      .withMessage((_, { req }) => req.t('DisplayName must not exceed 255 characters.')),
 
     body('email')
       .isEmail()
@@ -473,30 +473,30 @@ router.post('/user_details', apiRequestLimiter,
     body('genderId')
       .optional({ nullable: true })
       .isInt({ min: 0, max: 9 })
-      .withMessage((_, { req }) => req.t('Gender ID must be an integer between 0 and 9, inclusive.')),
+      .withMessage((_, { req }) => req.t('GenderId must be an integer between 0 and 9, inclusive.')),
 
     body('dateOfBirth')
       .optional({ nullable: true })
       .matches(/^\d{4}-\d{2}-\d{2}$/, 'i')
-      .withMessage((_, { req }) => req.t('Date of birth must be in YYYY-MM-DD format.'))
+      .withMessage((_, { req }) => req.t('DateOfBirth must be in YYYY-MM-DD format.'))
       .custom(value => {
         return moment(value, 'YYYY-MM-DD', true).isValid();
       })
-      .withMessage((_, { req }) => req.t('Date of birth must be a valid date.')),
+      .withMessage((_, { req }) => req.t('DateOfBirth must be a valid date.')),
 
     body('profilePictureUrl')
       .optional({ nullable: true })
       .isString()
-      .withMessage((_, { req }) => req.t('Private profile picture URL must be a string.'))
+      .withMessage((_, { req }) => req.t('ProfilePictureUrl must be a string.'))
       .isURL()
-      .withMessage((_, { req }) => req.t('Private profile picture URL must be a valid URL.'))
+      .withMessage((_, { req }) => req.t('ProfilePictureUrl must be a valid URL.'))
       .isLength({ max: 255 })
-      .withMessage((_, { req }) => req.t('Private profile picture URL must not exceed 255 characters.')),
+      .withMessage((_, { req }) => req.t('ProfilePictureUrl must not exceed 255 characters.')),
 
     body('isPrivatePicture')
       .optional({ nullable: true })
       .isBoolean()
-      .withMessage((_, { req }) => req.t('isPrivatePicture must be a boolean.')),
+      .withMessage((_, { req }) => req.t('IsPrivatePicture must be a boolean.')),
   ],
   checkRequestValidity,
   (req, res, next) => {
@@ -659,30 +659,30 @@ router.put('/user_details/:userId', apiRequestLimiter,
     body('firstName')
       .optional({ nullable: true })
       .isString()
-      .withMessage((_, { req }) => req.t('First name must be a string.'))
+      .withMessage((_, { req }) => req.t('FirstName must be a string.'))
       .isLength({ max: 255 })
-      .withMessage((_, { req }) => req.t('First name must not exceed 255 characters.')),
+      .withMessage((_, { req }) => req.t('FirstName must not exceed 255 characters.')),
 
     body('middleName')
       .optional({ nullable: true })
       .isString()
-      .withMessage((_, { req }) => req.t('Middle name must be a string.'))
+      .withMessage((_, { req }) => req.t('MiddleName must be a string.'))
       .isLength({ max: 255 })
-      .withMessage((_, { req }) => req.t('Middle name must not exceed 255 characters.')),
+      .withMessage((_, { req }) => req.t('MiddleName must not exceed 255 characters.')),
 
     body('lastName')
       .optional({ nullable: true })
       .isString()
-      .withMessage((_, { req }) => req.t('Last name must be a string.'))
+      .withMessage((_, { req }) => req.t('LastName must be a string.'))
       .isLength({ max: 255 })
-      .withMessage((_, { req }) => req.t('Last name must not exceed 255 characters.')),
+      .withMessage((_, { req }) => req.t('LastName must not exceed 255 characters.')),
 
     body('displayName')
       .optional({ nullable: true })
       .isString()
-      .withMessage((_, { req }) => req.t('Display name must be a string.'))
+      .withMessage((_, { req }) => req.t('DisplayName must be a string.'))
       .isLength({ max: 255 })
-      .withMessage((_, { req }) => req.t('Display name must not exceed 255 characters.')),
+      .withMessage((_, { req }) => req.t('DisplayName must not exceed 255 characters.')),
 
     body('email')
       .isEmail()
@@ -693,30 +693,30 @@ router.put('/user_details/:userId', apiRequestLimiter,
     body('genderId')
       .optional({ nullable: true })
       .isInt({ min: 0, max: 9 })
-      .withMessage((_, { req }) => req.t('Gender ID must be an integer between 0 and 9, inclusive.')),
+      .withMessage((_, { req }) => req.t('GenderId must be an integer between 0 and 9, inclusive.')),
 
     body('dateOfBirth')
       .optional({ nullable: true })
       .matches(/^\d{4}-\d{2}-\d{2}$/, 'i')
-      .withMessage((_, { req }) => req.t('Date of birth must be in YYYY-MM-DD format.'))
+      .withMessage((_, { req }) => req.t('DateOfBirth must be in YYYY-MM-DD format.'))
       .custom(value => {
         return moment(value, 'YYYY-MM-DD', true).isValid();
       })
-      .withMessage((_, { req }) => req.t('Date of birth must be a valid date.')),
+      .withMessage((_, { req }) => req.t('DateOfBirth must be a valid date.')),
 
     body('profilePictureUrl')
       .optional({ nullable: true })
       .isString()
-      .withMessage((_, { req }) => req.t('Private profile picture URL must be a string.'))
+      .withMessage((_, { req }) => req.t('ProfilePictureUrl must be a string.'))
       .isURL()
-      .withMessage((_, { req }) => req.t('Private profile picture URL must be a valid URL.'))
+      .withMessage((_, { req }) => req.t('ProfilePictureUrl must be a valid URL.'))
       .isLength({ max: 255 })
-      .withMessage((_, { req }) => req.t('Private profile picture URL must not exceed 255 characters.')),
+      .withMessage((_, { req }) => req.t('ProfilePictureUrl must not exceed 255 characters.')),
 
     body('isPrivatePicture')
       .optional({ nullable: true })
       .isBoolean()
-      .withMessage((_, { req }) => req.t('isPrivatePicture must be a boolean.')),
+      .withMessage((_, { req }) => req.t('IsPrivatePicture must be a boolean.')),
   ],
   checkRequestValidity,
   (req, res, next) => {

@@ -271,7 +271,7 @@ describe('/user_details endpoints', () => {
             const res = await request(app).put(`/v1/user_details/${userDetails.userId}`).send(copy).set('Authorization', `Bearer ${authData.token}`);
 
             expect(res.statusCode).toEqual(400);
-            expect(res.body.errors[0].msg).toEqual('Gender ID must be an integer between 0 and 9, inclusive.');
+            expect(res.body.errors[0].msg).toEqual('GenderId must be an integer between 0 and 9, inclusive.');
         });
 
 

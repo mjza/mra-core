@@ -4,6 +4,7 @@ const db = require('../../utils/database');
 const { apiRequestLimiter } = require('../../utils/rateLimit');
 const { toLowerCamelCase } = require('../../utils/converters');
 const { authorizeUser, checkRequestValidity } = require('../../utils/validations');
+const { updateEventLog } = require('../../utils/logger');
 const router = express.Router();
 module.exports = router;
 
@@ -17,6 +18,7 @@ module.exports = router;
  *     security:
  *       - bearerAuth: []
  *     parameters:
+ *       - $ref: '#/components/parameters/lang'
  *       - in: query
  *         name: isoCode
  *         schema:
@@ -140,30 +142,30 @@ router.get('/countries', apiRequestLimiter,
   [
     query('isoCode')
       .optional()
-      .isString().withMessage('Country ISO code must be a string')
-      .matches(/^[A-Za-z_]+$/).withMessage('Country code can only contain letters and underscores')
+      .isString().withMessage((_, { req }) => req.t('Country isoCode must be a string.'))
+      .matches(/^[A-Za-z_]+$/).withMessage((_, { req }) => req.t('Country isoCode can only contain letters and underscores.'))
       .trim()
       .toUpperCase(),
 
     query('countryName')
       .optional()
-      .isString().withMessage('Country name must be a string')
+      .isString().withMessage((_, { req }) => req.t('CountryName must be a string.'))
       .trim(),
 
     query('isSupported')
       .optional()
-      .isBoolean().withMessage('isSupported must be a boolean')
+      .isBoolean().withMessage((_, { req }) => req.t('IsSupported must be a boolean.'))
       .toBoolean(),
 
     query('page')
       .optional()
-      .isInt({ min: 1 }).withMessage('Page must be a positive integer')
+      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('Page must be a positive integer.'))
       .toInt()
       .default(1),  
 
     query('limit')
       .optional()
-      .isInt({ min: 1, max: 100 }).withMessage('Limit must be a positive integer and no more than 100')
+      .isInt({ min: 1, max: 100 }).withMessage((_, { req }) => req.t('Limit must be a positive integer and no more than 100.'))
       .toInt()
       .default(30),
 
@@ -199,7 +201,7 @@ router.get('/countries', apiRequestLimiter,
       const countries = await db.getCountries(req.conditions.where, req.pagination);
 
       if (!countries || countries.length === 0) {
-        return res.status(404).json({ message: 'No countries found' });
+        return res.status(404).json({ message: req.t('No countries found.') });
       }
 
       const hasMore = countries.length > limit;
@@ -207,7 +209,7 @@ router.get('/countries', apiRequestLimiter,
 
       return res.json({data, hasMore});
     } catch (err) {
-      console.error('Error fetching countries:', err);
+      updateEventLog(req, err);
       return res.status(500).json({ message: err.message });
     }
   }
@@ -223,6 +225,7 @@ router.get('/countries', apiRequestLimiter,
  *     security:
  *       - bearerAuth: []
  *     parameters:
+ *       - $ref: '#/components/parameters/lang'
  *       - in: query
  *         name: longitude
  *         required: true
@@ -367,13 +370,13 @@ router.get('/countries', apiRequestLimiter,
 router.get('/addresses', apiRequestLimiter,
   [
     query('longitude')
-      .exists().withMessage('Longitude is required')
-      .isFloat({ min: -180, max: 180 }).withMessage('Longitude must be a number between -180 and 180')
+      .exists().withMessage((_, { req }) => req.t('Longitude is required.'))
+      .isFloat({ min: -180, max: 180 }).withMessage((_, { req }) => req.t('Longitude must be a number between -180 and 180.'))
       .toFloat(),
   
     query('latitude')
-      .exists().withMessage('Latitude is required')
-      .isFloat({ min: -90, max: 90 }).withMessage('Latitude must be a number between -90 and 90')
+      .exists().withMessage((_, { req }) => req.t('Latitude is required.'))
+      .isFloat({ min: -90, max: 90 }).withMessage((_, { req }) => req.t('Latitude must be a number between -90 and 90.'))
       .toFloat(),
   ],  
   checkRequestValidity,
@@ -389,12 +392,12 @@ router.get('/addresses', apiRequestLimiter,
       const addressDataArray = await db.getAddressData(longitude, latitude);
 
       if (!addressDataArray || addressDataArray.length === 0) {
-        return res.status(404).json({ message: 'Address data not found' });
+        return res.status(404).json({ message: req.t('Address data not found.') });
       }
 
       return res.json({data: addressDataArray.map(item => toLowerCamelCase(item))});
     } catch (err) {
-      console.error('Error fetching address data:', err);
+      updateEventLog(req, err);
       return res.status(500).json({ message: err.message });
     }
   }
@@ -410,6 +413,7 @@ router.get('/addresses', apiRequestLimiter,
  *     security:
  *       - bearerAuth: []
  *     parameters:
+ *       - $ref: '#/components/parameters/lang'
  *       - in: query
  *         name: longitude
  *         required: true
@@ -511,13 +515,13 @@ router.get('/addresses', apiRequestLimiter,
 router.get('/location', apiRequestLimiter,
   [
     query('longitude')
-      .exists().withMessage('Longitude is required')
-      .isFloat({ min: -180, max: 180 }).withMessage('Longitude must be a number between -180 and 180')
+      .exists().withMessage((_, { req }) => req.t('Longitude is required.'))
+      .isFloat({ min: -180, max: 180 }).withMessage((_, { req }) => req.t('Longitude must be a number between -180 and 180.'))
       .toFloat(),
   
     query('latitude')
-      .exists().withMessage('Latitude is required')
-      .isFloat({ min: -90, max: 90 }).withMessage('Latitude must be a number between -90 and 90')
+      .exists().withMessage((_, { req }) => req.t('Latitude is required.'))
+      .isFloat({ min: -90, max: 90 }).withMessage((_, { req }) => req.t('Latitude must be a number between -90 and 90.'))
       .toFloat(),
   ],
   checkRequestValidity,
@@ -533,12 +537,12 @@ router.get('/location', apiRequestLimiter,
       const locationData = await db.getLocationData(longitude, latitude);
 
       if (!locationData) {
-        return res.status(404).json({ message: 'Location data not found' });
+        return res.status(404).json({ message: req.t('Location data not found') });
       }
 
       return res.json({data: toLowerCamelCase(locationData)});
     } catch (err) {
-      console.error('Error fetching location data:', err);
+      updateEventLog(req, err);
       return res.status(500).json({ message: err.message });
     }
   }
@@ -554,6 +558,7 @@ router.get('/location', apiRequestLimiter,
  *     security:
  *       - bearerAuth: []
  *     parameters:
+ *       - $ref: '#/components/parameters/lang'
  *       - in: query
  *         name: countryCode
  *         required: true
@@ -631,9 +636,9 @@ router.get('/location', apiRequestLimiter,
 router.get('/statesByCountryCode', apiRequestLimiter,
   [
     query('countryCode')
-      .exists().withMessage('Country code is required')
-      .isString().withMessage('Country code must be a string')
-      .matches(/^[A-Za-z_]+$/).withMessage('Country code can only contain letters and underscores')
+      .exists().withMessage((_, { req }) => req.t('CountryCode is required.'))
+      .isString().withMessage((_, { req }) => req.t('CountryCode must be a string.'))
+      .matches(/^[A-Za-z_]+$/).withMessage((_, { req }) => req.t('CountryCode can only contain letters and underscores.'))
       .trim()
       .toUpperCase(),
   ],
@@ -649,12 +654,12 @@ router.get('/statesByCountryCode', apiRequestLimiter,
       const states = await db.getStatesByCountryCode(countryCode);
 
       if (!states || states.length === 0) {
-        return res.status(404).json({ message: 'States not found' });
+        return res.status(404).json({ message: req.t('States not found') });
       }
 
       return res.json({ data: states.map(item => toLowerCamelCase(item))});
     } catch (err) {
-      console.error('Error fetching states:', err);
+      updateEventLog(req, err);
       return res.status(500).json({ message: err.message });
     }
   }
@@ -670,6 +675,7 @@ router.get('/statesByCountryCode', apiRequestLimiter,
  *     security:
  *       - bearerAuth: []
  *     parameters:
+ *       - $ref: '#/components/parameters/lang'
  *       - in: query
  *         name: countryId
  *         required: true
@@ -747,8 +753,8 @@ router.get('/statesByCountryCode', apiRequestLimiter,
 router.get('/statesByCountryId', apiRequestLimiter,
   [
     query('countryId')
-      .exists().withMessage('Country ID is required')
-      .isInt({ min: 1 }).withMessage('Country ID must be a positive integer')
+      .exists().withMessage((_, { req }) => req.t('CountryId is required.'))
+      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('CountryId must be a positive integer.'))
       .toInt(),
   ],
   checkRequestValidity,
@@ -763,12 +769,12 @@ router.get('/statesByCountryId', apiRequestLimiter,
       const states = await db.getStatesByCountryId(countryId);
 
       if (!states || states.length === 0) {
-        return res.status(404).json({ message: 'States not found' });
+        return res.status(404).json({ message: req.t('States not found') });
       }
 
       return res.json({ data: states.map(item => toLowerCamelCase(item))});
     } catch (err) {
-      console.error('Error fetching states:', err);
+      updateEventLog(req, err);
       return res.status(500).json({ message: err.message });
     }
   }
@@ -784,6 +790,7 @@ router.get('/statesByCountryId', apiRequestLimiter,
  *     security:
  *       - bearerAuth: []
  *     parameters:
+ *       - $ref: '#/components/parameters/lang'
  *       - in: query
  *         name: countryId
  *         required: true
@@ -867,13 +874,13 @@ router.get('/statesByCountryId', apiRequestLimiter,
 router.get('/citiesByState', apiRequestLimiter,
   [
     query('countryId')
-      .exists().withMessage('Country ID is required')
-      .isInt({ min: 1 }).withMessage('Country ID must be a positive integer')
+      .exists().withMessage((_, { req }) => req.t('CountryId is required.'))
+      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('CountryId must be a positive integer.'))
       .toInt(),
 
     query('stateId')
-      .exists().withMessage('State ID is required')
-      .isInt({ min: 1 }).withMessage('State ID must be a positive integer')
+      .exists().withMessage((_, { req }) => req.t('StateId is required.'))
+      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('StateId must be a positive integer.'))
       .toInt(),
   ],
   checkRequestValidity,
@@ -889,12 +896,12 @@ router.get('/citiesByState', apiRequestLimiter,
       const cities = await db.getCitiesByState(countryId, stateId);
 
       if (!cities || cities.length === 0) {
-        return res.status(404).json({ message: 'Cities not found' });
+        return res.status(404).json({ message: req.t('Cities not found.') });
       }
 
       return res.json({data: cities.map(item => toLowerCamelCase(item))});
     } catch (err) {
-      console.error('Error fetching cities:', err);
+      updateEventLog(req, err);
       return res.status(500).json({ message: err.message });
     }
   }
