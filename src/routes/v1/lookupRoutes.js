@@ -82,13 +82,13 @@ router.get('/gender_types', apiRequestLimiter,
   [
     query('page')
       .optional()
-      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('Page must be a positive integer.'))
+      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('Page must be a positive integer number.'))
       .toInt()
       .default(1),  
 
     query('limit')
       .optional()
-      .isInt({ min: 1, max: 100 }).withMessage((_, { req }) => req.t('Limit must be a positive integer and no more than 100.'))
+      .isInt({ min: 1, max: 100 }).withMessage((_, { req }) => req.t('Limit must be a positive integer number and no more than 100.'))
       .toInt()
       .default(30),
   ],
@@ -230,7 +230,7 @@ router.get('/ticket_categories', apiRequestLimiter,
   [
     query('ticketTitle')
       .optional({ checkFalsy: true })
-      .isString().withMessage((_, { req }) => req.t('Ticket title must be a string.')),
+      .isString().withMessage((_, { req }) => req.t('TicketTitle must be a string.')),
     
     query('longitude')
       .optional()
@@ -244,23 +244,23 @@ router.get('/ticket_categories', apiRequestLimiter,
 
     query('customerId')
       .optional({ checkFalsy: true })
-      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('CustomerId must be a positive integer.'))
+      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('CustomerId must be a positive integer number.'))
       .toInt(),
 
     query('customerTypeId')
       .optional({ checkFalsy: true })
-      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('CustomerTypeId must be a positive integer.'))
+      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('CustomerTypeId must be a positive integer number.'))
       .toInt(),  
 
     query('page')
       .optional()
-      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('Page must be a positive integer.'))
+      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('Page must be a positive integer number number.'))
       .toInt()
       .default(1),  
 
     query('limit')
       .optional()
-      .isInt({ min: 1, max: 100 }).withMessage((_, { req }) => req.t('Limit must be a positive integer and no more than 100.'))
+      .isInt({ min: 1, max: 100 }).withMessage((_, { req }) => req.t('Limit must be a positive integer number and no more than 100.'))
       .toInt()
       .default(30),
   ],

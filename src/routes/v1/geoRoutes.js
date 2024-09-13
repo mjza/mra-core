@@ -20,10 +20,10 @@ module.exports = router;
  *     parameters:
  *       - $ref: '#/components/parameters/lang'
  *       - in: query
- *         name: isoCode
+ *         name: countryCode
  *         schema:
  *           type: string
- *         description: ISO code of the country to filter by.
+ *         description: Country ISO code of the country to filter by.
  *       - in: query
  *         name: countryName
  *         schema:
@@ -140,10 +140,10 @@ module.exports = router;
  */
 router.get('/countries', apiRequestLimiter,
   [
-    query('isoCode')
+    query('countryCode')
       .optional()
-      .isString().withMessage((_, { req }) => req.t('Country isoCode must be a string.'))
-      .matches(/^[A-Za-z_]+$/).withMessage((_, { req }) => req.t('Country isoCode can only contain letters and underscores.'))
+      .isString().withMessage((_, { req }) => req.t('CountryCode must be a string.'))
+      .matches(/^[A-Za-z_]+$/).withMessage((_, { req }) => req.t('CountryCode can only contain letters and underscores.'))
       .trim()
       .toUpperCase(),
 
@@ -159,13 +159,13 @@ router.get('/countries', apiRequestLimiter,
 
     query('page')
       .optional()
-      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('Page must be a positive integer.'))
+      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('Page must be a positive integer number.'))
       .toInt()
       .default(1),  
 
     query('limit')
       .optional()
-      .isInt({ min: 1, max: 100 }).withMessage((_, { req }) => req.t('Limit must be a positive integer and no more than 100.'))
+      .isInt({ min: 1, max: 100 }).withMessage((_, { req }) => req.t('Limit must be a positive integer number and no more than 100.'))
       .toInt()
       .default(30),
 
@@ -182,10 +182,10 @@ router.get('/countries', apiRequestLimiter,
     next();
   },
   (req, res, next) => {
-    const { isoCode, countryName, isSupported } = req.query;
+    const { countryCode, countryName, isSupported } = req.query;
     const where = { is_valid: true };
-    if (isoCode) 
-      where.iso_code = isoCode;
+    if (countryCode) 
+      where.iso_code = countryCode;
     if (countryName) 
       where.country_name = { ['Sequelize.Op.iLike']: `%${countryName}%` };
     if (isSupported !== undefined) 
@@ -537,7 +537,7 @@ router.get('/location', apiRequestLimiter,
       const locationData = await db.getLocationData(longitude, latitude);
 
       if (!locationData) {
-        return res.status(404).json({ message: req.t('Location data not found') });
+        return res.status(404).json({ message: req.t('Location data not found.') });
       }
 
       return res.json({data: toLowerCamelCase(locationData)});
@@ -654,7 +654,7 @@ router.get('/statesByCountryCode', apiRequestLimiter,
       const states = await db.getStatesByCountryCode(countryCode);
 
       if (!states || states.length === 0) {
-        return res.status(404).json({ message: req.t('States not found') });
+        return res.status(404).json({ message: req.t('States not found.') });
       }
 
       return res.json({ data: states.map(item => toLowerCamelCase(item))});
@@ -754,7 +754,7 @@ router.get('/statesByCountryId', apiRequestLimiter,
   [
     query('countryId')
       .exists().withMessage((_, { req }) => req.t('CountryId is required.'))
-      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('CountryId must be a positive integer.'))
+      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('CountryId must be a positive integer number.'))
       .toInt(),
   ],
   checkRequestValidity,
@@ -769,7 +769,7 @@ router.get('/statesByCountryId', apiRequestLimiter,
       const states = await db.getStatesByCountryId(countryId);
 
       if (!states || states.length === 0) {
-        return res.status(404).json({ message: req.t('States not found') });
+        return res.status(404).json({ message: req.t('States not found.') });
       }
 
       return res.json({ data: states.map(item => toLowerCamelCase(item))});
@@ -875,12 +875,12 @@ router.get('/citiesByState', apiRequestLimiter,
   [
     query('countryId')
       .exists().withMessage((_, { req }) => req.t('CountryId is required.'))
-      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('CountryId must be a positive integer.'))
+      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('CountryId must be a positive integer number.'))
       .toInt(),
 
     query('stateId')
       .exists().withMessage((_, { req }) => req.t('StateId is required.'))
-      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('StateId must be a positive integer.'))
+      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('StateId must be a positive integer number.'))
       .toInt(),
   ],
   checkRequestValidity,

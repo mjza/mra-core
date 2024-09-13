@@ -318,10 +318,11 @@ async function getUserDetails(where, pagination) {
  *
  * @param {Object} userDetails - The user details object containing profile picture information.
  * @param {Object} [where] - The condition for updating the record, typically contains the user ID.
+ * @param {String} lang - The locale for translation of error message
  * @returns {Promise<Object>} The updated userDetails object.
  * @throws {Error} If the user's profile picture URL could not be stored publicly.
  */
-async function storeUserPublicInformation(userDetails, where) {
+async function storeUserPublicInformation(userDetails, where, lang) {
   let public_profile_picture_url;
   if (userDetails.is_private_picture === true) {
     public_profile_picture_url = null;
@@ -349,7 +350,7 @@ async function storeUserPublicInformation(userDetails, where) {
     }
   );
   if (updateCount < 0) {
-    throw new Error("Couldn't store user's profile picture, display name or email.");
+    throw new Error(i18next.t("Couldn't store user's profile picture, display name or email.", {lang}));
   }
   delete userDetails.email;
   delete userDetails.display_name;
@@ -406,11 +407,12 @@ class UserDetails {
  * Creates new user details in the database.
  *
  * @param {Object} userDetails - The user details object.
+ * @param {String} lang - The locale for translation of error message
  * @returns {Object} The created user details object.
  */
-async function createUserDetails(userDetails) {
+async function createUserDetails(userDetails, lang) {
   userDetails = new UserDetails(userDetails);
-  userDetails = await storeUserPublicInformation(userDetails);
+  userDetails = await storeUserPublicInformation(userDetails, null, lang);
   await MraUserDetails.create(userDetails);
   const results = await getUserDetails({ user_id: userDetails.user_id }, { limit: 1, offset: 0 });
   return results && results[0];
@@ -421,11 +423,12 @@ async function createUserDetails(userDetails) {
  *
  * @param {object} where - The object contain `where` clauses to specify the search criteria.
  * @param {Object} userDetails - The new user details object.
+ * @param {String} lang - The locale for translation of error message
  * @returns {Object} The updated user details object.
  */
-async function updateUserDetails(userDetails, where) {
+async function updateUserDetails(userDetails, where, lang) {
   userDetails = new UserDetails(userDetails);
-  userDetails = await storeUserPublicInformation(userDetails, where);
+  userDetails = await storeUserPublicInformation(userDetails, where, lang);
   await MraUserDetails.update(userDetails, { where });
   const results = await getUserDetails(where, { limit: 1, offset: 0 });
   return results && results[0];
@@ -1024,7 +1027,6 @@ async function getCitiesByState(countryId, stateId) {
   // Return the results directly, as they are already in the desired format
   return results;
 }
-
 
 module.exports = {
   closeDBConnections,

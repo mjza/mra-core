@@ -261,18 +261,18 @@ router.get('/user_details', apiRequestLimiter,
   [
     query('userId')
       .optional({ checkFalsy: true })
-      .isNumeric().withMessage((_, { req }) => req.t('UserId must be a number.'))
-      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('UserId must be a positive integer.')),
+      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('UserId must be a positive integer number.'))
+      .toInt(),
     
     query('page')
       .optional()
-      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('Page must be a positive integer.'))
+      .isInt({ min: 1 }).withMessage((_, { req }) => req.t('Page must be a positive integer number.'))
       .toInt()
       .default(1),  
 
     query('limit')
       .optional()
-      .isInt({ min: 1, max: 100 }).withMessage((_, { req }) => req.t('Limit must be a positive integer and no more than 100.'))
+      .isInt({ min: 1, max: 100 }).withMessage((_, { req }) => req.t('Limit must be a positive integer number and no more than 100.'))
       .toInt()
       .default(30),
   ],
@@ -434,7 +434,7 @@ router.post('/user_details', apiRequestLimiter,
       .notEmpty()
       .withMessage((_, { req }) => req.t('UserId is required.'))
       .isInt({ gt: 0 })
-      .withMessage((_, { req }) => req.t('UserId must be an integer greater than 0.')),
+      .withMessage((_, { req }) => req.t('UserId must be a positive integer number.')),
 
     body('firstName')
       .optional({ nullable: true })
@@ -517,7 +517,7 @@ router.post('/user_details', apiRequestLimiter,
       });
       // Copy the array and add a new item
       const newSecretProperties = userDetails.is_private_picture === true ? [...secretProperties, 'profile_picture_url'] : [...secretProperties];
-      const createdUserDetails = await db.createUserDetails(encryptObjectItems(userDetails, newSecretProperties));
+      const createdUserDetails = await db.createUserDetails(encryptObjectItems(userDetails, newSecretProperties), req.language);
       return res.status(201).json(toLowerCamelCase(decryptObjectItems(createdUserDetails, newSecretProperties)));
     } catch (err) {
       updateEventLog(req, err);
@@ -654,7 +654,7 @@ router.put('/user_details/:userId', apiRequestLimiter,
       .exists()
       .withMessage((_, { req }) => req.t('UserId is required.'))
       .matches(/^[\d]+$/)
-      .withMessage((_, { req }) => req.t('UserId must be a number.')),
+      .withMessage((_, { req }) => req.t('UserId must be a positive integer number.')),
 
     body('firstName')
       .optional({ nullable: true })
@@ -738,7 +738,7 @@ router.put('/user_details/:userId', apiRequestLimiter,
 
       // Copy the array and add a new item
       const newSecretProperties = userDetails.is_private_picture === true ? [...secretProperties, 'profile_picture_url'] : [...secretProperties];
-      const updatedUserDetails = await db.updateUserDetails(encryptObjectItems(userDetails, newSecretProperties), req.conditions.where);
+      const updatedUserDetails = await db.updateUserDetails(encryptObjectItems(userDetails, newSecretProperties), req.conditions.where, req.language);
       if(!updatedUserDetails.creator){
         return res.status(206).json(toLowerCamelCase(decryptObjectItems(updatedUserDetails, newSecretProperties)));
       }

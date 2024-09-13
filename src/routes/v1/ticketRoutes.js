@@ -483,122 +483,122 @@ router.get('/tickets', apiRequestLimiter,
     query('page')
       .optional({ checkFalsy: true })
       .isInt({ min: 1 })
-      .withMessage((_, { req }) => req.t('Page must be a positive integer.'))
+      .withMessage((_, { req }) => req.t('Page must be a positive integer number.'))
       .toInt()
       .default(1),
-  
+
     query('limit')
       .optional({ checkFalsy: true })
       .isInt({ min: 1, max: 100 })
-      .withMessage((_, { req }) => req.t('Limit must be a positive integer and no more than 100.'))
+      .withMessage((_, { req }) => req.t('Limit must be a positive integer number and no more than 100.'))
       .toInt()
       .default(30),
-  
+
     query('ticketId')
       .optional({ checkFalsy: true })
-      .isInt()
-      .withMessage((_, { req }) => req.t('TicketId must be an integer number.'))
+      .isInt({ gt: 0 })
+      .withMessage((_, { req }) => req.t('TicketId must be a positive integer number.'))
       .toInt(),
-  
+
     query('customerId')
       .optional({ checkFalsy: true })
-      .isInt()
-      .withMessage((_, { req }) => req.t('CustomerId must be an integer number.'))
+      .isInt({ gt: 0 })
+      .withMessage((_, { req }) => req.t('CustomerId must be a positive integer number.'))
       .toInt(),
-  
+
     query('ticketCategoryId')
       .optional({ checkFalsy: true })
-      .isInt()
-      .withMessage((_, { req }) => req.t('TicketCategoryId must be an integer number.'))
+      .isInt({ gt: 0 })
+      .withMessage((_, { req }) => req.t('TicketCategoryId must be a positive integer number.'))
       .toInt(),
-  
+
     query('cityId')
       .optional({ checkFalsy: true })
-      .isInt()
-      .withMessage((_, { req }) => req.t('CityId must be an integer number.'))
+      .isInt({ gt: 0 })
+      .withMessage((_, { req }) => req.t('CityId must be a positive integer number.'))
       .toInt(),
-  
+
     query('countryId')
       .optional({ checkFalsy: true })
-      .isInt()
-      .withMessage((_, { req }) => req.t('CountryId must be an integer number.'))
+      .isInt({ gt: 0 })
+      .withMessage((_, { req }) => req.t('CountryId must be a positive integer number.'))
       .toInt(),
-  
+
     query('creator')
       .optional({ checkFalsy: true })
-      .isInt()
-      .withMessage((_, { req }) => req.t('Creator must be an integer number.'))
+      .isInt({ gt: 0 })
+      .withMessage((_, { req }) => req.t('Creator must be a positive integer number.'))
       .toInt(),
-  
+
     query('updator')
       .optional({ checkFalsy: true })
-      .isInt()
-      .withMessage((_, { req }) => req.t('Updator must be an integer number.'))
+      .isInt({ gt: 0 })
+      .withMessage((_, { req }) => req.t('Updator must be a positive integer number.'))
       .toInt(),
-  
+
     query('publisher')
       .optional({ checkFalsy: true })
-      .isInt()
-      .withMessage((_, { req }) => req.t('Publisher must be an integer number.'))
+      .isInt({ gt: 0 })
+      .withMessage((_, { req }) => req.t('Publisher must be a positive integer number.'))
       .toInt(),
-  
+
     query('createdAtAfter')
       .optional({ checkFalsy: true })
       .isISO8601()
       .withMessage((_, { req }) => req.t('CreatedAtAfter must be a date in YYYY-MM-DD format.')),
-  
+
     query('createdAtBefore')
       .optional({ checkFalsy: true })
       .isISO8601()
       .withMessage((_, { req }) => req.t('CreatedAtBefore must be a date in YYYY-MM-DD format.')),
-  
+
     query('updatedAtAfter')
       .optional({ checkFalsy: true })
       .isISO8601()
       .withMessage((_, { req }) => req.t('UpdatedAtAfter must be a date in YYYY-MM-DD format.')),
-  
+
     query('updatedAtBefore')
       .optional({ checkFalsy: true })
       .isISO8601()
       .withMessage((_, { req }) => req.t('UpdatedAtBefore must be a date in YYYY-MM-DD format.')),
-  
+
     query('publishedAtAfter')
       .optional({ checkFalsy: true })
       .isISO8601()
       .withMessage((_, { req }) => req.t('PublishedAtAfter must be a date in YYYY-MM-DD format.')),
-  
+
     query('publishedAtBefore')
       .optional({ checkFalsy: true })
       .isISO8601()
       .withMessage((_, { req }) => req.t('PublishedAtBefore must be a date in YYYY-MM-DD format.')),
-  
+
     query('closedAtAfter')
       .optional({ checkFalsy: true })
       .isISO8601()
       .withMessage((_, { req }) => req.t('ClosedAtAfter must be a date in YYYY-MM-DD format.')),
-  
+
     query('closedAtBefore')
       .optional({ checkFalsy: true })
       .isISO8601()
       .withMessage((_, { req }) => req.t('ClosedAtBefore must be a date in YYYY-MM-DD format.')),
-  
+
     query('isConfidential')
       .optional({ checkFalsy: true })
       .isBoolean()
-      .withMessage((_, { req }) => req.t('IsConfidential must be either true or false.'))
+      .withMessage((_, { req }) => req.t('IsConfidential must be a boolean.'))
       .toBoolean(),
-  
+
     query('search')
       .optional({ checkFalsy: true })
       .isString()
       .withMessage((_, { req }) => req.t('Search must be a non-empty string.')),
-  
+
     query('searchCaseSensitive')
       .optional({ checkFalsy: true })
       .isBoolean()
-      .withMessage((_, { req }) => req.t('SearchCaseSensitive must be either true or false.'))
+      .withMessage((_, { req }) => req.t('SearchCaseSensitive must be a boolean.'))
       .toBoolean(),
-  
+
     query('searchFields')
       .optional({ checkFalsy: true })
       .custom((value, { req }) => {
@@ -609,7 +609,7 @@ router.get('/tickets', apiRequestLimiter,
         }
         return true;
       })
-  ],  
+  ],
   checkRequestValidity,
   (req, res, next) => {
     // for tickets we manage paginations in a loop to remove some tickets from the results.
@@ -677,7 +677,7 @@ router.get('/tickets', apiRequestLimiter,
         const ticketsArray = await db.getTickets(req.conditions.where, req.pagination, req.order);
         hasMore = ticketsArray.length > pageSize;
         // Adjust array size if over limit due to hasMore check
-        const slicedTicketsArray = hasMore ? ticketsArray.slice(0, pageSize) : ticketsArray; 
+        const slicedTicketsArray = hasMore ? ticketsArray.slice(0, pageSize) : ticketsArray;
 
         for (const ticket of slicedTicketsArray) {
           const customerId = ticket.customer?.customer_id;
@@ -824,53 +824,66 @@ router.get('/tickets', apiRequestLimiter,
 router.post('/tickets', apiRequestLimiter,
   [
     body('title')
-      .notEmpty().withMessage((_, { req }) => req.t('Title is required.'))
-      .isString().withMessage((_, { req }) => req.t('Title must be a string.'))
-      .isLength({ max: 255 }).withMessage((_, { req }) => req.t('Title must not exceed 255 characters.')),
-  
+      .notEmpty()
+      .withMessage((_, { req }) => req.t('Title is required.'))
+      .isString()
+      .withMessage((_, { req }) => req.t('Title must be a string.'))
+      .isLength({ max: 255 })
+      .withMessage((_, { req }) => req.t('Title must not exceed 255 characters.')),
+
     body('body')
       .optional()
-      .isString().withMessage((_, { req }) => req.t('Body must be a string.')),
-  
+      .isString()
+      .withMessage((_, { req }) => req.t('Body must be a string.')),
+
     body('customerId')
       .optional()
-      .isInt({ gt: 0 }).withMessage((_, { req }) => req.t('CustomerId must be an integer greater than 0.')),
-  
+      .isInt({ gt: 0 })
+      .withMessage((_, { req }) => req.t('CustomerId must be a positive integer number.'))
+      .toInt(),
+
     body('ticketCategoryId')
       .optional()
-      .isInt({ gt: 0 }).withMessage((_, { req }) => req.t('TicketCategoryId must be an integer greater than 0.')),
-  
+      .isInt({ gt: 0 })
+      .withMessage((_, { req }) => req.t('TicketCategoryId must be a positive integer number.'))
+      .toInt(),
+
     body('isConfidential')
       .optional()
-      .isBoolean().withMessage((_, { req }) => req.t('IsConfidential must be a boolean.')),
-  
+      .isBoolean()
+      .withMessage((_, { req }) => req.t('IsConfidential must be a boolean.')),
+
     body('mediaUrls')
       .optional()
       .isArray({ min: 1 }).withMessage((_, { req }) => req.t('MediaUrls must be a non-empty array.'))
       .custom((urls, { req }) => {
         urls.forEach(url => {
           if (typeof url !== 'string' || !/^https?:\/\/.+/i.test(url)) {
-            throw new Error(req.t('Invalid URL detected: {url}', { url }));
+            throw new Error(req.t('Invalid URL detected: ') + url);
           }
         });
         return true;
       }),
-  
+
     body('geoLatitude')
       .optional()
-      .isFloat({ min: -90, max: 90 }).withMessage((_, { req }) => req.t('GeoLatitude must be a float between -90 and 90.')),
-  
+      .isFloat({ min: -90, max: 90 })
+      .withMessage((_, { req }) => req.t('GeoLatitude must be a float between -90 and 90.'))
+      .toFloat(),
+
     body('geoLongitude')
       .optional()
-      .isFloat({ min: -180, max: 180 }).withMessage((_, { req }) => req.t('GeoLongitude must be a float between -180 and 180.')),
-  
+      .isFloat({ min: -180, max: 180 })
+      .withMessage((_, { req }) => req.t('GeoLongitude must be a float between -180 and 180.'))
+      .toFloat(),
+
     oneOf([
       [
         body('cityId').isEmpty(),
         body('cityName').isEmpty()
       ],
       [
-        body('cityId').exists().isInt({ gt: 0 }).withMessage((_, { req }) => req.t('CityId must be an integer greater than 0.')),
+        body('cityId').exists().isInt({ gt: 0 }).withMessage((_, { req }) => req.t('CityId must be a positive integer number.')),
         body('cityName').isEmpty()
       ],
       [
@@ -878,19 +891,19 @@ router.post('/tickets', apiRequestLimiter,
         body('cityName').exists().isString().withMessage((_, { req }) => req.t('CityName must be a string.'))
       ]
     ], (_, { req }) => req.t('Either cityId or cityName must be provided, but not both, or both can be null.')),
-  
+
     body('ticketId')
       .not().exists().withMessage((_, { req }) => req.t('TicketId should not be provided in the request.')),
-  
+
     body('fullAddress')
       .not().exists().withMessage((_, { req }) => req.t('FullAddress should not be provided in the request.')),
-  
+
     body('creator')
       .not().exists().withMessage((_, { req }) => req.t('Creator is set automatically and should not be provided in the request.')),
-  
+
     body('updator')
       .not().exists().withMessage((_, { req }) => req.t('Updator is set automatically and should not be provided in the request.')),
-  ],  
+  ],
   checkRequestValidity,
   async (req, res, next) => {
     const { customerId } = req.body;
@@ -1008,57 +1021,61 @@ router.put('/tickets/:ticketId', apiRequestLimiter,
   [
     param('ticketId')
       .notEmpty().withMessage((_, { req }) => req.t('TicketId is required.'))
-      .isInt().withMessage((_, { req }) => req.t('TicketId must be an integer.'))
+      .isInt({ gt: 0 }).withMessage((_, { req }) => req.t('TicketId must be a positive integer number.'))
       .toInt(),
 
     body('title')
       .optional()
       .isString().withMessage((_, { req }) => req.t('Title must be a string.'))
       .isLength({ max: 255 }).withMessage((_, { req }) => req.t('Title must not exceed 255 characters.')),
-  
+
     body('body')
       .optional()
       .isString().withMessage((_, { req }) => req.t('Body must be a string.')),
-  
+
     body('customerId')
       .optional()
-      .isInt({ gt: 0 }).withMessage((_, { req }) => req.t('CustomerId must be an integer greater than 0.')),
-  
+      .isInt({ gt: 0 }).withMessage((_, { req }) => req.t('CustomerId must be a positive integer number.')),
+
     body('ticketCategoryId')
       .optional()
-      .isInt({ gt: 0 }).withMessage((_, { req }) => req.t('TicketCategoryId must be an integer greater than 0.')),
-  
+      .isInt({ gt: 0 }).withMessage((_, { req }) => req.t('TicketCategoryId must be a positive integer number.')),
+
     body('isConfidential')
       .optional()
       .isBoolean().withMessage((_, { req }) => req.t('IsConfidential must be a boolean.')),
-  
+
     body('mediaUrls')
       .optional()
       .isArray({ min: 1 }).withMessage((_, { req }) => req.t('MediaUrls must be a non-empty array.'))
       .custom((urls, { req }) => {
         urls.forEach(url => {
           if (typeof url !== 'string' || !/^https?:\/\/.+/i.test(url)) {
-            throw new Error(req.t('Invalid URL detected: {url}', { url }));
+            throw new Error(req.t('Invalid URL detected: ') + url);
           }
         });
         return true;
       }),
-  
+
     body('geoLatitude')
       .optional()
-      .isFloat({ min: -90, max: 90 }).withMessage((_, { req }) => req.t('GeoLatitude must be a float between -90 and 90.')),
-  
+      .isFloat({ min: -90, max: 90 })
+      .withMessage((_, { req }) => req.t('GeoLatitude must be a float between -90 and 90.'))
+      .toFloat(),
+
     body('geoLongitude')
       .optional()
-      .isFloat({ min: -180, max: 180 }).withMessage((_, { req }) => req.t('GeoLongitude must be a float between -180 and 180.')),
-  
+      .isFloat({ min: -180, max: 180 })
+      .withMessage((_, { req }) => req.t('GeoLongitude must be a float between -180 and 180.'))
+      .toFloat(),
+
     oneOf([
       [
         body('cityId').isEmpty(),
         body('cityName').isEmpty()
       ],
       [
-        body('cityId').exists().isInt({ gt: 0 }).withMessage((_, { req }) => req.t('CityId must be an integer greater than 0.')),
+        body('cityId').exists().isInt({ gt: 0 }).withMessage((_, { req }) => req.t('CityId must be a positive integer number.')),
         body('cityName').isEmpty()
       ],
       [
@@ -1066,16 +1083,16 @@ router.put('/tickets/:ticketId', apiRequestLimiter,
         body('cityName').exists().isString().withMessage((_, { req }) => req.t('CityName must be a string.'))
       ]
     ], (_, { req }) => req.t('Either cityId or cityName must be provided, but not both, or both can be null.')),
-  
+
     body('ticketId')
       .not().exists().withMessage((_, { req }) => req.t('TicketId should not be provided in the request.')),
-  
+
     body('fullAddress')
       .not().exists().withMessage((_, { req }) => req.t('FullAddress should not be provided in the request.')),
-  
+
     body('creator')
       .not().exists().withMessage((_, { req }) => req.t('Creator is set automatically and should not be provided in the request.')),
-  
+
     body('updator')
       .not().exists().withMessage((_, { req }) => req.t('Updator is set automatically and should not be provided in the request.')),
   ],
@@ -1105,7 +1122,7 @@ router.put('/tickets/:ticketId', apiRequestLimiter,
 
       const updatedTicket = await db.updateTicket(where, ticket);
       if (!updatedTicket) {
-        throw new Error(req.t('Failed to update ticket.'));
+        throw new Error(req.t('Failed to update the ticket.'));
       }
       return res.status(200).json(toLowerCamelCase(updatedTicket));
     } catch (err) {
@@ -1169,8 +1186,10 @@ router.put('/tickets/:ticketId', apiRequestLimiter,
 router.delete('/tickets/:ticketId', apiRequestLimiter,
   [
     param('ticketId')
-      .notEmpty().withMessage((_, { req }) => req.t('TicketId is required as a parameter.'))
-      .isInt().withMessage((_, { req }) => req.t('TicketId must be an integer.'))
+      .notEmpty()
+      .withMessage((_, { req }) => req.t('TicketId is required as a parameter.'))
+      .isInt({ gt: 0 })
+      .withMessage((_, { req }) => req.t('TicketId must be a positive integer number.'))
       .toInt(),
   ],
   checkRequestValidity,
