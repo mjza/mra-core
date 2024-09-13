@@ -1,5 +1,7 @@
 const { Sequelize, sequelize, closeSequelize, MraUsers, MraAuditLogsCore, MraGenderTypes, MraUserDetails, MraTickets, MraCustomers, MraTicketCategories, MragCountries, MragCities, } = require('../models');
 const { Op } = Sequelize;
+const i18next = require('i18next');
+
 /**
  * Closes the database connection pool.
  */
@@ -196,10 +198,12 @@ const deleteAuditLog = async (logId) => {
  * @throws {Error} If there is an error fetching gender types from the database.
  */
 async function getGenderTypes(where, pagination) {
-  const { limit, offset } = pagination;
+  let { limit, offset } = pagination;
 
-  if (isNaN(limit) || isNaN(offset) || limit <= 0 || offset < 0)
-    throw new Error('Limit and offset must be valid numbers');
+  if (isNaN(limit) || limit <= 0)
+    limit = 1;
+  if (isNaN(offset) || offset < 0)
+    offset = 0;
 
   const genderTypes = await MraGenderTypes.findAll({
     where,
@@ -229,10 +233,12 @@ async function getGenderTypes(where, pagination) {
  *                     are available, allowing the caller to determine if additional pages exist.
  */
 async function getUserDetails(where, pagination) {
-  const { limit, offset } = pagination ?? {};
+  let { limit, offset } = pagination ?? {};
 
-  if (isNaN(limit) || isNaN(offset) || limit <= 0 || offset < 0)
-    throw new Error('Limit and offset must be valid numbers');
+  if (isNaN(limit) || limit <= 0)
+    limit = 1;
+  if (isNaN(offset) || offset < 0)
+    offset = 0;
 
   const userDetails = await MraUserDetails.findAll({
     where,
@@ -265,7 +271,7 @@ async function getUserDetails(where, pagination) {
       if (userDetailPlain.profile_picture_url !== null) {
         userDetailPlain.is_private_picture = false;
       } else {
-        userDetailPlain.profile_picture_url = userDetailPlain.private_profile_picture_url;        
+        userDetailPlain.profile_picture_url = userDetailPlain.private_profile_picture_url;
         userDetailPlain.is_private_picture = userDetailPlain.profile_picture_url != null ? true : null;
         delete userDetailPlain.private_profile_picture_url;
       }
@@ -343,7 +349,7 @@ async function storeUserPublicInformation(userDetails, where) {
     }
   );
   if (updateCount < 0) {
-    throw new Error('Couldn\'t store user\'s profile picture, display name or email.');
+    throw new Error("Couldn't store user's profile picture, display name or email.");
   }
   delete userDetails.email;
   delete userDetails.display_name;
@@ -500,10 +506,12 @@ const deleteUserByUsername = async (username) => {
  * @returns {Object[]} An array of ticket objects.
  */
 async function getTickets(where, pagination, order = [['created_at', 'DESC']]) {
-  const { limit, offset } = pagination;
+  let { limit, offset } = pagination;
 
-  if (isNaN(limit) || isNaN(offset) || limit <= 0 || offset < 0)
-    throw new Error('Limit and offset must be valid numbers');
+  if (isNaN(limit) || limit <= 0)
+    limit = 1;
+  if (isNaN(offset) || offset < 0)
+    offset = 0;
 
   const tickets = await MraTickets.findAll({
     where: convertSequelizeOperators(where),
@@ -642,10 +650,12 @@ const isPrivateCustomer = async (customerId) => {
  * @returns {Promise<Array>} A promise that resolves to an array of similar ticket categories.
  */
 async function getTicketCategories(ticketTitle, latitude, longitude, customerId, customerTypeId, pagination) {
-  const { limit, offset } = pagination;
+  let { limit, offset } = pagination;
 
-  if (isNaN(limit) || isNaN(offset) || limit <= 0 || offset < 0)
-    throw new Error('Limit and offset must be valid numbers');
+  if (isNaN(limit) || limit <= 0)
+    limit = 1;
+  if (isNaN(offset) || offset < 0)
+    offset = 0;
 
   const geoCondition = latitude && longitude ? `ST_Contains(tc.boundary, ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326))` : 'true';
   const customerCondition = customerId ? `tc.customer_id = :customerId` : 'tc.customer_id IS NULL';
@@ -762,30 +772,32 @@ async function getTicketCategories(ticketTitle, latitude, longitude, customerId,
  * @throws {Error} If there is an error fetching countries from the database.
  */
 async function getCountries(where = {}, pagination) {
-  const { limit, offset } = pagination;
+  let { limit, offset } = pagination;
 
-  if (isNaN(limit) || isNaN(offset) || limit <= 0 || offset < 0)
-    throw new Error('Limit and offset must be valid numbers');
+  if (isNaN(limit) || limit <= 0)
+    limit = 1;
+  if (isNaN(offset) || offset < 0)
+    offset = 0;
 
-    const countries = await MragCountries.findAll({
-      where: convertSequelizeOperators({
-        ...where,
-        is_valid: true,
-      }),
-      limit,
-      offset,
-      attributes: [
-        'country_id',
-        'country_name',
-        'iso_code',
-        'iso_long_code',
-        'dial_code',
-        'languages',
-        'is_supported',
-      ],
-    });
+  const countries = await MragCountries.findAll({
+    where: convertSequelizeOperators({
+      ...where,
+      is_valid: true,
+    }),
+    limit,
+    offset,
+    attributes: [
+      'country_id',
+      'country_name',
+      'iso_code',
+      'iso_long_code',
+      'dial_code',
+      'languages',
+      'is_supported',
+    ],
+  });
 
-    return countries && countries.map(country => country.get({ plain: true }));
+  return countries && countries.map(country => country.get({ plain: true }));
 }
 
 /**
@@ -855,18 +867,18 @@ class Address {
  * @throws {Error} If there is an error executing the database function.
  */
 async function getAddressData(longitude, latitude) {
-    const results = await sequelize.query(
-      `SELECT * FROM mra_function_get_address_data_rs(:longitude, :latitude)`,
-      {
-        replacements: { longitude, latitude },
-        type: Sequelize.QueryTypes.SELECT
-      }
-    );
+  const results = await sequelize.query(
+    `SELECT * FROM mra_function_get_address_data_rs(:longitude, :latitude)`,
+    {
+      replacements: { longitude, latitude },
+      type: Sequelize.QueryTypes.SELECT
+    }
+  );
 
-    // Map the results to Address instances
-    const addresses = results.map(result => new Address(result));
+  // Map the results to Address instances
+  const addresses = results.map(result => new Address(result));
 
-    return addresses;
+  return addresses;
 }
 
 /**
@@ -917,20 +929,20 @@ class Location {
  * @throws {Error} If there is an error executing the database function.
  */
 async function getLocationData(longitude, latitude) {
-    const results = await sequelize.query(
-      `SELECT * FROM mra_function_get_location_data_json(:longitude, :latitude)`,
-      {
-        replacements: { longitude, latitude },
-        type: Sequelize.QueryTypes.SELECT
-      }
-    );
+  const results = await sequelize.query(
+    `SELECT * FROM mra_function_get_location_data_json(:longitude, :latitude)`,
+    {
+      replacements: { longitude, latitude },
+      type: Sequelize.QueryTypes.SELECT
+    }
+  );
 
-    // Map the results to Location instances
-    const locations = results.map(result => {
-      return result.mra_function_get_location_data_json ?? result;
-    }).map(result => new Location(result));
+  // Map the results to Location instances
+  const locations = results.map(result => {
+    return result.mra_function_get_location_data_json ?? result;
+  }).map(result => new Location(result));
 
-    return locations && locations.length > 0 ? locations[0] : null;
+  return locations && locations.length > 0 ? locations[0] : null;
 }
 
 /**
@@ -947,16 +959,16 @@ async function getLocationData(longitude, latitude) {
  * @throws {Error} If there is an error executing the database function.
  */
 async function getStatesByCountryCode(countryCode) {
-    const results = await sequelize.query(
-      `SELECT * FROM mra_function_get_states_by_country_code(:country_iso_code)`,
-      {
-        replacements: { country_iso_code: countryCode },
-        type: Sequelize.QueryTypes.SELECT
-      }
-    );
+  const results = await sequelize.query(
+    `SELECT * FROM mra_function_get_states_by_country_code(:country_iso_code)`,
+    {
+      replacements: { country_iso_code: countryCode },
+      type: Sequelize.QueryTypes.SELECT
+    }
+  );
 
-    // Return the results directly, as they are already in the desired format
-    return results;
+  // Return the results directly, as they are already in the desired format
+  return results;
 }
 
 /**
@@ -973,16 +985,16 @@ async function getStatesByCountryCode(countryCode) {
  * @throws {Error} If there is an error executing the database function.
  */
 async function getStatesByCountryId(countryId) {
-    const results = await sequelize.query(
-      `SELECT * FROM mra_function_get_states_by_country_id(:country_id)`,
-      {
-        replacements: { country_id: countryId },
-        type: Sequelize.QueryTypes.SELECT
-      }
-    );
+  const results = await sequelize.query(
+    `SELECT * FROM mra_function_get_states_by_country_id(:country_id)`,
+    {
+      replacements: { country_id: countryId },
+      type: Sequelize.QueryTypes.SELECT
+    }
+  );
 
-    // Return the results directly, as they are already in the desired format
-    return results;
+  // Return the results directly, as they are already in the desired format
+  return results;
 }
 
 
@@ -1001,16 +1013,16 @@ async function getStatesByCountryId(countryId) {
  * @throws {Error} If there is an error executing the database function.
  */
 async function getCitiesByState(countryId, stateId) {
-    const results = await sequelize.query(
-      `SELECT * FROM mra_function_get_cities_by_state(:country_id, :state_id)`,
-      {
-        replacements: { country_id: countryId, state_id: stateId },
-        type: Sequelize.QueryTypes.SELECT
-      }
-    );
+  const results = await sequelize.query(
+    `SELECT * FROM mra_function_get_cities_by_state(:country_id, :state_id)`,
+    {
+      replacements: { country_id: countryId, state_id: stateId },
+      type: Sequelize.QueryTypes.SELECT
+    }
+  );
 
-    // Return the results directly, as they are already in the desired format
-    return results;
+  // Return the results directly, as they are already in the desired format
+  return results;
 }
 
 

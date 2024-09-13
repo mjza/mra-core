@@ -44,7 +44,6 @@ async function createApp() {
     // Use the environment variable to define supported languages
     const supportedLanguages = process.env.SUPPORTED_LANG ? process.env.SUPPORTED_LANG.split(',') : ['en'];
 
-
     // Apply i18next middleware before defining routes
     i18next
         .use(Backend) // Use file-based translations

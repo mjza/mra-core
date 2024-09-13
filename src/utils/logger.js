@@ -54,6 +54,4 @@ const updateEventLog = async (req, comments) => {
     }
 };
 
-
-
 module.exports = { createEventLog, updateEventLog };

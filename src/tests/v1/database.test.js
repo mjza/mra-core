@@ -545,7 +545,7 @@ describe('Test DB functions', () => {
                 expect(result).toEqual([]); // Expecting no results due to high offset
             });
 
-            it('should throw an error if limit or offset are invalid', async () => {
+            it('should not throw an error if limit or offset are invalid', async () => {
                 const invalidPaginationCases = [
                     { limit: 'invalid', offset: 0 },
                     { limit: 10, offset: 'invalid' },
@@ -555,7 +555,7 @@ describe('Test DB functions', () => {
                 ];
 
                 for (const pagination of invalidPaginationCases) {
-                    await expect(db.getCountries({}, pagination)).rejects.toThrow('Limit and offset must be valid numbers');
+                    await expect(db.getCountries({}, pagination)).resolves.not.toThrow();
                 }
             });
         });
@@ -812,33 +812,19 @@ describe('Test DB functions', () => {
     describe('Test user details functions', () => {
 
         describe('Get user details validation for pagination', () => {
-            it('should return an error when pagination is not provided', async () => {
-                await expect(db.getUserDetails(where, null)).rejects.toThrow('Limit and offset must be valid numbers');
-            });
 
-            it('should return an error when limit is NaN', async () => {
-                const pagination = { limit: 'invalidLimit', offset: 10 };
-                await expect(db.getUserDetails(where, pagination)).rejects.toThrow('Limit and offset must be valid numbers');
-            });
+            it('should not throw an error if limit or offset are invalid', async () => {
+                const invalidPaginationCases = [
+                    { limit: 'invalid', offset: 0 },
+                    { limit: 1, offset: 'invalid' },
+                    { limit: 0, offset: 0 },
+                    { limit: -1, offset: 0 },
+                    { limit: 10, offset: -1 },
+                ];
 
-            it('should return an error when offset is NaN', async () => {
-                const pagination = { limit: 10, offset: 'invalidOffset' };
-                await expect(db.getUserDetails(where, pagination)).rejects.toThrow('Limit and offset must be valid numbers');
-            });
-
-            it('should return an error when limit is less than or equal to 0', async () => {
-                const pagination = { limit: 0, offset: 10 };
-                await expect(db.getUserDetails(where, pagination)).rejects.toThrow('Limit and offset must be valid numbers');
-            });
-
-            it('should return an error when offset is less than 0', async () => {
-                const pagination = { limit: 10, offset: -1 };
-                await expect(db.getUserDetails(where, pagination)).rejects.toThrow('Limit and offset must be valid numbers');
-            });
-
-            it('should not throw an error when limit and offset are valid numbers', async () => {
-                const pagination = { limit: 10, offset: 5 };
-                await expect(db.getUserDetails(where, pagination)).resolves.not.toThrow();
+                for (const pagination of invalidPaginationCases) {
+                    await expect(db.getUserDetails(where, pagination)).resolves.not.toThrow();
+                }
             });
         });
 
