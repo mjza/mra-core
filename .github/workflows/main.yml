@@ -14,7 +14,7 @@ jobs:
   build:
     
     env:
-      NODE_ENV: 'test'
+      NODE_ENV: 'test' 
       TZ: 'UTC'
       # Set environment variable from secret
       DB_USER: ${{ secrets.DB_USER }}
