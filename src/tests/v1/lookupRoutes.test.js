@@ -20,7 +20,7 @@ describe('Test lookup endpoints', () => {
         let response = await axios.post(`${process.env.AUTH_SERVER_URL}/v1/register`, mockUser, headers);
         const userId = response.data.userId;
         // Get the test user from the database
-        testUser = await db.getUserByUserId(userId);
+        const testUser = await db.getUserByUserId(userId);
         const inactiveUser = { username: testUser.username, activationCode: testUser.activation_code };
         await axios.post(`${process.env.AUTH_SERVER_URL}/v1/activate-by-code`, inactiveUser, headers);
         const user = { usernameOrEmail: mockUser.username, password: mockUser.password };
@@ -30,8 +30,14 @@ describe('Test lookup endpoints', () => {
     });
 
     afterAll(async () => {
-        await db.deleteUserByUsername(mockUser.username);
         await closeApp();
+        headers.headers['Authorization'] = `Bearer ${authData.token}`;
+        await axios.delete(`${process.env.AUTH_SERVER_URL}/v1/deregister`,
+            {
+                data: { username: mockUser.username },
+                ...headers,
+            }
+        );
     });
 
     // Test cases for /v1/gender_types

@@ -5,7 +5,7 @@ const { generateMockUserRoute } = require('../../utils/generators');
 
 describe('Test DB functions', () => {
 
-    let mockUser, createdUser, userDetails, where;
+    let mockUser, createdUser, authData, userDetails, where;
 
     const headers = {
         headers: {
@@ -21,6 +21,10 @@ describe('Test DB functions', () => {
         createdUser = await db.getUserByUserId(userId);
         const inactiveUser = { username: createdUser.username, activationCode: createdUser.activation_code };
         await axios.post(`${process.env.AUTH_SERVER_URL}/v1/activate-by-code`, inactiveUser, headers);
+        const user = { usernameOrEmail: mockUser.username, password: mockUser.password };
+        response = await axios.post(`${process.env.AUTH_SERVER_URL}/v1/login`, user, headers);
+
+        authData = response.data;
 
         userDetails = {
             user_id: createdUser.user_id,
@@ -40,8 +44,14 @@ describe('Test DB functions', () => {
     });
 
     afterAll(async () => {
-        await db.deleteUserByUsername(mockUser.username);
         await db.closeDBConnections();
+        headers.headers['Authorization'] = `Bearer ${authData.token}`;
+        await axios.delete(`${process.env.AUTH_SERVER_URL}/v1/deregister`,
+            {
+                data: { username: mockUser.username },
+                ...headers,
+            }
+        );        
     });
 
     describe('Test getUserByUsername function', () => {

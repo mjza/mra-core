@@ -45,8 +45,14 @@ describe('/user_details endpoints', () => {
 
     // Ensure the app resources are closed after all tests
     afterAll(async () => {
-        await db.deleteUserByUsername(mockUser.username);
         await closeApp();
+        headers.headers['Authorization'] = `Bearer ${authData.token}`;
+        await axios.delete(`${process.env.AUTH_SERVER_URL}/v1/deregister`,
+            {
+                data: { username: mockUser.username },
+                ...headers,
+            }
+        );
     });
 
     describe('GET /user_details before creation', () => {

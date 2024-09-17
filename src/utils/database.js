@@ -472,34 +472,6 @@ const getUserByUsername = async (username) => {
 };
 
 /**
- * Deletes a user from the database based on the provided username.
- *
- * @param {string} username - The username of the user to be deleted.
- * @returns {Object|null} The deleted user object if successful, null if no user was found or deleted.
- */
-const deleteUserByUsername = async (username) => {
-  if (!username || !username.trim())
-    return null;
-
-  const user = await MraUsers.findOne({
-    where: {
-      username: username.trim().toLowerCase()
-    }
-  });
-  if (!user) {
-    return null;
-  }
-
-  await MraUsers.destroy({
-    where: {
-      username: username.trim().toLowerCase(),
-    },
-  });
-
-  return user && user.get({ plain: true });
-};
-
-/**
  * Retrieves ticket from the database based on the provided conditions.
  *
  * @param {object} where - The object containing `where` clauses to specify the search criteria.
@@ -1037,7 +1009,6 @@ module.exports = {
   deleteAuditLog,
   getUserByUserId,
   getUserByUsername,
-  deleteUserByUsername,
   getUserDetails,
   createUserDetails,
   updateUserDetails,
