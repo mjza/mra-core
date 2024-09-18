@@ -15,6 +15,7 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerJSDoc = require('swagger-jsdoc');
 const db = require('./utils/database');
 const v1Routes = require('./routes/v1/routes');
+const { checkJSONBody } = require('./utils/validations');
 
 /**
  * Asynchronously initializes and configures the Express application. This function
@@ -74,7 +75,13 @@ async function createApp() {
 
     // Built-in middleware for parsing JSON and URL-encoded bodies
     app.use(express.json());
-    app.use(express.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded
+
+    // A middleware to catch JSON parsing errors
+    app.use(checkJSONBody);
+
+    // for parsing application/x-www-form-urlencoded
+    app.use(express.urlencoded({ extended: true }));
+
     // Cookie-parser middleware for parsing cookies
     app.use(cookieParser());
 
@@ -148,17 +155,17 @@ async function createApp() {
                 },
                 parameters: {
                     lang: {
-                      in: 'query',
-                      name: 'lang',
-                      required: false,
-                      schema: {
-                        type: 'string',
-                        enum: supportedLanguages,
-                        default: 'en',
-                      },
-                      description: 'Language for the response messages',
+                        in: 'query',
+                        name: 'lang',
+                        required: false,
+                        schema: {
+                            type: 'string',
+                            enum: supportedLanguages,
+                            default: 'en',
+                        },
+                        description: 'Language for the response messages',
                     },
-                  },
+                },
             },
             tags: [
                 { name: '1st', description: 'Lookup Tables' },

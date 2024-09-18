@@ -150,4 +150,43 @@ const checkRequestValidity = (req, res, next) => {
     next();
 };
 
-module.exports = { testUrlAccessibility, isValidUrl, authorizeUser, isUserAuthorized, checkRequestValidity };
+/**
+ * Middleware to handle and respond to invalid JSON format errors.
+ * This middleware captures `SyntaxError` thrown by the `express.json()` middleware
+ * when the incoming request contains invalid JSON. It extracts useful information
+ * about the error, including the error type, message, and position where the error
+ * occurred in the JSON string, and sends a detailed response back to the client.
+ *
+ * @param {object} err - The error object thrown by `express.json()` when it encounters malformed JSON.
+ * @param {object} req - The request object from Express.js containing the client's request data.
+ * @param {object} res - The response object from Express.js used to send back the desired HTTP response.
+ * @param {function} next - The callback function to pass control to the next middleware function.
+ *
+ * @returns {void|object} - Sends a 400 error response with details if the error is a `SyntaxError`.
+ *                          Otherwise, passes control to the next middleware.
+ *
+ * @example
+ * // Usage as part of the Express middleware stack:
+ * app.use(express.json());
+ * app.use(checkJSONBody);
+ */
+const checkJSONBody = (err, req, res, next) => {
+    if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+        // Extract relevant details from the error message
+        const position = err.message.match(/position (\d+)/)?.[1] || req.t('Unknown.');
+        const errorSnippet = err.message.split('\n')[0]; // Get first line of the error
+
+        return res.status(400).json({
+            message: req.t('Invalid JSON format.'),
+            details: {
+                type: err.type,
+                error: errorSnippet,  // Include the main error message
+                position: position,  // Provide position of the error in the JSON string
+                hint: req.t('Ensure that all keys and values are properly enclosed in double quotes.')
+            }
+        });
+    }
+    next();
+};
+
+module.exports = { testUrlAccessibility, isValidUrl, authorizeUser, isUserAuthorized, checkRequestValidity, checkJSONBody };
