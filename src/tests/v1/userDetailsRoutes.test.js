@@ -23,7 +23,7 @@ describe('/user_details endpoints', () => {
         // Get the test user from the database
         createdUser = await db.getUserByUserId(userId);
         const inactiveUser = { username: createdUser.username, activationCode: createdUser.activation_code };
-        await axios.post(`${process.env.AUTH_SERVER_URL}/v1/activate-by-code`, inactiveUser);
+        await axios.post(`${process.env.AUTH_SERVER_URL}/v1/activate-by-code`, inactiveUser, headers);
         const user = { usernameOrEmail: mockUser.username, password: mockUser.password };
         response = await axios.post(`${process.env.AUTH_SERVER_URL}/v1/login`, user, headers);
 

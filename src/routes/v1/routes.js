@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-const { auditLogMiddleware } = require('./auditLogMiddleware');
+const auditLogMiddleware = require('../../utils/logger');
 const lookupRoutes = require('./lookupRoutes');
 const userDetailsRoutes = require('./userDetailsRoutes');
 const ticketRoutes = require('./ticketRoutes');
