@@ -38,8 +38,8 @@ const apiRequestLimiter = rateLimit({
         return { message: req.t('Too many requests from this IP, please try again after 15 minutes.') };
     },
     skip: (req, _) => {
-        if (process.env.X_DEVELOPMENT_TOKEN) {
-            const developmentToken = req.headers['x-development-token'];
+        const developmentToken = req.headers['x-development-token'];
+        if (developmentToken) {            
             return developmentToken === process.env.X_DEVELOPMENT_TOKEN;
         }
         // Do not skip in production
