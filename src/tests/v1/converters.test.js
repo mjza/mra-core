@@ -83,15 +83,15 @@ describe('Test converters', () => {
                 originalUrl: '/api/users/123',
                 headers: {
                     'authorization': 'Bearer xyz123',
-                    'content-type': 'application/json'
+                    'content-type': 'application/json',
+                    'x-development-token': 'abcd'
                 },
                 body: {
                     password: 'secret',
                     email: 'test@example.com',
                     dateOfBirth: new Date(),
                     profilePictureUrl: 'abc',
-                    profilePictureThumbnailUrl: 'def',
-                    privateProfilePictureUrl: 'ghi'
+                    profilePictureThumbnailUrl: 'def'
                 },
                 query: {
                     token: 'abcdef',
@@ -118,15 +118,15 @@ describe('Test converters', () => {
                 url: '/api/users/123',
                 headers: {
                     'authorization': '****',
-                    'content-type': 'application/json'
+                    'content-type': 'application/json',
+                    'x-development-token': '****'
                 },
                 body: {
                     password: '****',
-                    email: 'test@example.com',
+                    email: '****',
                     dateOfBirth: '****',
-                    profilePictureUrl: 'abc',
-                    profilePictureThumbnailUrl: 'def',
-                    privateProfilePictureUrl: '****'
+                    profilePictureUrl: '****',
+                    profilePictureThumbnailUrl: '****'
                 },
                 query: {
                     token: '****',
