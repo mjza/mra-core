@@ -49,7 +49,6 @@ describe('/user_details endpoints', () => {
         headers.headers['Authorization'] = `Bearer ${authData.token}`;
         await axios.delete(`${process.env.AUTH_SERVER_URL}/v1/deregister`,
             {
-                data: { username: mockUser.username },
                 ...headers,
             }
         );
