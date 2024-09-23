@@ -37,7 +37,7 @@
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "env": {
-                "NODE_ENV": "development"
+                "NODE_ENV": "local-test"
             },
             "skipFiles": [
                 "<node_internals>/**"
@@ -59,7 +59,7 @@
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "env": {
-                "NODE_ENV": "development"
+                "NODE_ENV": "local-test"
             },
             "skipFiles": [
                 "<node_internals>/**"
