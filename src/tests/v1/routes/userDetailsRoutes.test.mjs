@@ -16,7 +16,6 @@ describe('/user_details endpoints', () => {
     };
 
     const axiosInstance = axios.create({
-        timeout: 5000,
         httpAgent: new http.Agent({ keepAlive: false }),
         httpsAgent: new https.Agent({ keepAlive: false }),
     });
