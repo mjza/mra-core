@@ -15,14 +15,14 @@ describe('/user_details endpoints', () => {
 
     beforeAll(async () => {
         mockUser = await generateMockUserRoute();
-        let response = await axios.post(`${process.env.AUTH_SERVER_URL}/v1/register`, mockUser, { headers: headers });
+        let response = await axios.post(`${process.env.AUTH_SERVER_URL}/v1/register`, mockUser, { headers });
         const userId = response.data.userId;
         // Get the test user from the database
         createdUser = await getUserByUserId(userId);
         const inactiveUser = { username: createdUser.username, activationCode: createdUser.activation_code };
-        await axios.post(`${process.env.AUTH_SERVER_URL}/v1/activate-by-code`, inactiveUser, { headers: headers });
+        await axios.post(`${process.env.AUTH_SERVER_URL}/v1/activate-by-code`, inactiveUser, { headers });
         const user = { usernameOrEmail: mockUser.username, password: mockUser.password };
-        response = await axios.post(`${process.env.AUTH_SERVER_URL}/v1/login`, user, { headers: headers });
+        response = await axios.post(`${process.env.AUTH_SERVER_URL}/v1/login`, user, { headers });
 
         authData = response.data;
 
@@ -44,7 +44,7 @@ describe('/user_details endpoints', () => {
     afterAll(async () => {
         try {
             headers['Authorization'] = `Bearer ${authData.token}`;
-            await axios.delete(`${process.env.AUTH_SERVER_URL}/v1/deregister`, { headers: headers });
+            await axios.delete(`${process.env.AUTH_SERVER_URL}/v1/deregister`, { headers });
         } catch (error) {
             console.error('Error during deregister:', error);
         }
