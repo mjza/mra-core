@@ -12,7 +12,7 @@ npm install express pg
 6. Add a `Procfile` to the application. This file is used for starting the application in Heroku and must have the following content.
 Please note that Heroku does not use the start script in of the `package.json`.
 ```
-web: NODE_ENV=production node src/index.js
+web: NODE_ENV=production node src/index.mjs
 ``` 
 
 ## Install Heroku CLI

@@ -17,7 +17,7 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "program": "${workspaceFolder}/src/index.js",  // Explicitly reference your entry point
+            "program": "${workspaceFolder}/src/index.mjs",  // Explicitly reference your entry point
             "env": {
                 "NODE_ENV": "development"
             },
@@ -32,7 +32,8 @@
                 "--runInBand", // Runs all tests in a single process, important for debugging
                 "--detectOpenHandles",
                 "--verbose",
-                "--bail"
+                "--bail",
+                "--config=src/config/jest.config.mjs"
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
@@ -40,7 +41,8 @@
                 "NODE_ENV": "local-test"
             },
             "skipFiles": [
-                "<node_internals>/**"
+                "<node_internals>/**",
+                "node_modules/**"
             ]
         },
         {
@@ -49,20 +51,24 @@
             "name": "Debug a Selected Test File",
             "program": "${workspaceFolder}/node_modules/jest/bin/jest.js",
             "args": [
+                "--coverage",
                 "--runInBand",
                 "--detectOpenHandles",
                 "--verbose",
                 "--bail",
+                "--config=src/config/jest.config.mjs",
                 "--testPathPattern",
                 "${fileBasename}"
             ],
             "console": "integratedTerminal",
             "internalConsoleOptions": "neverOpen",
             "env": {
-                "NODE_ENV": "local-test"
+                "NODE_ENV": "local-test",
+                "DO_NOT_CLOSE_APP": "TRUE"
             },
             "skipFiles": [
-                "<node_internals>/**"
+                "<node_internals>/**",
+                "node_modules/**"
             ]
         }
     ]
