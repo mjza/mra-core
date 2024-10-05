@@ -1,4 +1,4 @@
-import { generateMockUserRoute, generateRandomString } from '../../utils/generators.mjs';
+import { generateMockUserRoute, generateRandomString } from '../../../utils/generators.mjs';
 
 describe('Generator Functions', () => {
 

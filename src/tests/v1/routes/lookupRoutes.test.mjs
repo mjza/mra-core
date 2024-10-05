@@ -1,7 +1,9 @@
 import axios from 'axios';
+import http from 'http';
+import https from 'https';
 import request from 'supertest';
-import { getUserByUserId } from '../../utils/database.mjs';
-import { generateMockUserRoute } from '../../utils/generators.mjs';
+import { getUserByUserId } from '../../../utils/database.mjs';
+import { generateMockUserRoute } from '../../../utils/generators.mjs';
 
 describe('Test lookup endpoints', () => {
 
@@ -13,17 +15,23 @@ describe('Test lookup endpoints', () => {
         'x-development-token': process.env.X_DEVELOPMENT_TOKEN,
     };
 
+    const axiosInstance = axios.create({
+        timeout: 5000,
+        httpAgent: new http.Agent({ keepAlive: false }),
+        httpsAgent: new https.Agent({ keepAlive: false }),
+    });
+
     beforeAll(async () => {
 
         mockUser = await generateMockUserRoute();
-        let response = await axios.post(`${process.env.AUTH_SERVER_URL}/v1/register`, mockUser, { headers });
+        let response = await axiosInstance.post(`${process.env.AUTH_SERVER_URL}/v1/register`, mockUser, { headers });
         const userId = response.data.userId;
         // Get the test user from the database
         const testUser = await getUserByUserId(userId);
         const inactiveUser = { username: testUser.username, activationCode: testUser.activation_code };
-        await axios.post(`${process.env.AUTH_SERVER_URL}/v1/activate-by-code`, inactiveUser, { headers });
+        await axiosInstance.post(`${process.env.AUTH_SERVER_URL}/v1/activate-by-code`, inactiveUser, { headers });
         const user = { usernameOrEmail: mockUser.username, password: mockUser.password };
-        response = await axios.post(`${process.env.AUTH_SERVER_URL}/v1/login`, user, { headers });
+        response = await axiosInstance.post(`${process.env.AUTH_SERVER_URL}/v1/login`, user, { headers });
 
         authData = response.data;
     });
@@ -31,9 +39,17 @@ describe('Test lookup endpoints', () => {
     afterAll(async () => {
         try {
             headers['Authorization'] = `Bearer ${authData.token}`;
-            await axios.delete(`${process.env.AUTH_SERVER_URL}/v1/deregister`, { headers });
+            await axiosInstance.delete(`${process.env.AUTH_SERVER_URL}/v1/deregister`, { headers });
         } catch (error) {
             console.error('Error during deregister:', error);
+        } finally {
+            // Explicitly destroy the agents to close any open sockets
+            if (axiosInstance.defaults.httpAgent) {
+                axiosInstance.defaults.httpAgent.destroy();
+            }
+            if (axiosInstance.defaults.httpsAgent) {
+                axiosInstance.defaults.httpsAgent.destroy();
+            }
         }
     });
 

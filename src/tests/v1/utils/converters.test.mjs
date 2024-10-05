@@ -1,6 +1,6 @@
 // Keep thos lines above this import, otherwise the environment SECRET_KEY will be used.
 // Tests are designed with this secret key to see the expected results.
-import { convertRequestData, decrypt, decryptObjectItems, encrypt, encryptObjectItems, toLowerCamelCase, toSnakeCase } from '../../utils/converters.mjs';
+import { convertRequestData, decrypt, decryptObjectItems, encrypt, encryptObjectItems, toLowerCamelCase, toSnakeCase } from '../../../utils/converters.mjs';
 
 describe('Test converters', () => {
 
