@@ -175,7 +175,7 @@ const createApp = async () => {
         const v1SwaggerOptions = {
             swaggerDefinition,
             // Absolute paths to files containing Swagger annotations
-            apis: ['src/routes/v1/*.js', 'src/utils/*.js'],
+            apis: ['src/routes/v1/*.mjs', 'src/utils/*.mjs'],
         };
 
         // Initialize swagger-jsdoc
