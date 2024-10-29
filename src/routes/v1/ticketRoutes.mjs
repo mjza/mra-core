@@ -1,10 +1,11 @@
+import { converters } from '@reportcycle/mra-utils';
+import { Router } from 'express';
 import { body, oneOf, param, query } from 'express-validator';
-import { toLowerCamelCase, toSnakeCase } from '../../utils/converters.mjs';
 import { isPrivateCustomer as _isPrivateCustomer, addDateRangeFilter, createTicket, deleteTicket, getTickets, updateTicket } from '../../utils/database.mjs';
 import { updateEventLog } from '../../utils/logger.mjs';
 import { apiRequestLimiter } from '../../utils/rateLimit.mjs';
 import { authorizeUser, checkRequestValidity, isUserAuthorized } from '../../utils/validations.mjs';
-import { Router } from 'express';
+const { toLowerCamelCase, toSnakeCase } = converters;
 const router = Router();
 export default router;
 
@@ -116,7 +117,7 @@ export default router;
  *             customerName:
  *               type: string
  *               example: "Calgary CityHall"
- *               description: Name of the customer associated with this ticket.  
+ *               description: Name of the customer associated with this ticket.
  *         ticketCategory:
  *           type: object
  *           description: Information of the ticket category
@@ -128,7 +129,7 @@ export default router;
  *             ticketCategoryName:
  *               type: string
  *               example: "Public Transportation Issues"
- *               description: Name of the ticket category. 
+ *               description: Name of the ticket category.
  *         isConfidential:
  *           type: boolean
  *           description: Indicates if the ticket is confidential
@@ -275,7 +276,7 @@ export default router;
  *           type: string
  *           example: "Done"
  *           description: Reason that the ticket was closed
- * 
+ *
  *     UnauthorizedAccessInvalidTokenProvided:
  *       description: Access unauthorized due to invalid token
  *       content:
@@ -286,7 +287,7 @@ export default router;
  *               message:
  *                 type: string
  *                 example: "Invalid token provided."
- * 
+ *
  *     ApiRateLimitExceeded:
  *       description: API rate limit has been exceeded
  *       content:
@@ -297,7 +298,7 @@ export default router;
  *               message:
  *                 type: string
  *                 example: "API rate limit exceeded."
- * 
+ *
  *     ServerInternalError:
  *       description: Internal server error
  *       content:
@@ -702,11 +703,11 @@ router.get('/tickets', apiRequestLimiter,
             continue;
           }
 
-          // Proceed with authorization check for private customers     
-          // We check for each customer, as we might have some forbidden tickets for some users    
+          // Proceed with authorization check for private customers
+          // We check for each customer, as we might have some forbidden tickets for some users
           try {
             // It is important to pass a where that includes the domain_column of the table
-            // In case of ticket it is the customer_id 
+            // In case of ticket it is the customer_id
             const where = { ticket_id: ticket.ticket_id, customer_id: customerId };
             const response = await isUserAuthorized({ dom: String(customerId), obj: 'mra_tickets', act: 'R', attrs: { where } }, req);
             if (response.status === 200) {

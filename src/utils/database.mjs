@@ -313,7 +313,7 @@ const getUserDetails = async (where, pagination) => {
 
 /**
  * Updates the profile picture URL in the `MraUsers` model if it is public, or prepares it for storing in `MraUserDetails` if it is a private picture.
- * 
+ *
  * This function is only called internally by `createUserDetails` or `updateUserDetails` to handle the profile picture URL.
  *
  * @param {Object} userDetails - The user details object containing profile picture information.
@@ -350,7 +350,7 @@ const storeUserPublicInformation = async (userDetails, where, lang) => {
     }
   );
   if (updateCount < 0) {
-    throw new Error(t("Couldn't store user's profile picture, display name or email.", {lang}));
+    throw new Error(t("Couldn't store user's profile picture, display name or email.", { lang }));
   }
   delete userDetails.email;
   delete userDetails.display_name;
@@ -362,7 +362,7 @@ class UserDetails {
    * Constructor for creating a userDetails object.
    * Only allows specific properties to ensure security by eliminating extra or unwanted properties.
    * @param {Object} userDetails - Object containing user details.
-   * @param {number} userDetails.user_id - User ID of the detail owner. 
+   * @param {number} userDetails.user_id - User ID of the detail owner.
    * @param {string} userDetails.first_name - First name of the user.
    * @param {string} [userDetails.middle_name] - Middle name of the user (optional).
    * @param {string} userDetails.last_name - Last name of the user.
@@ -664,33 +664,33 @@ const getTicketCategories = async (ticketTitle, latitude, longitude, customerId,
   }
 
   const query = `
-    SELECT 
-      tc.ticket_category_id, 
-      tc.ticket_category_name, 
+    SELECT
+      tc.ticket_category_id,
+      tc.ticket_category_name,
       tc.description,
-      tc.parent_category_id, 
-      tc.customer_type_id, 
-      tc.customer_id, 
-      tc.source_id, 
-      tc.boundary, 
-      tc.is_active, 
-      tc.creator, 
-      tc.created_at, 
-      tc.updator, 
+      tc.parent_category_id,
+      tc.customer_type_id,
+      tc.customer_id,
+      tc.source_id,
+      tc.boundary,
+      tc.is_active,
+      tc.creator,
+      tc.created_at,
+      tc.updator,
       tc.updated_at,
       ${rankCalculation}
-    FROM 
+    FROM
       mra_ticket_categories tc
     ${joinClause}
-    WHERE 
+    WHERE
       ${ticketTitleCondition}
-      AND 
+      AND
       (
         ${geoCondition}
         AND
         (
           ${customerCondition}
-          ${customerId ? 'OR' : 'AND'} 
+          ${customerId ? 'OR' : 'AND'}
           ${customerTypeCondition}
         )
       )
@@ -698,10 +698,10 @@ const getTicketCategories = async (ticketTitle, latitude, longitude, customerId,
       ${additionalCondition}
       ${customerId ? `
         AND NOT EXISTS (
-          SELECT 1 
-          FROM mra_ticket_categories tc_sub 
-          WHERE 
-            tc_sub.source_id = tc.ticket_category_id 
+          SELECT 1
+          FROM mra_ticket_categories tc_sub
+          WHERE
+            tc_sub.source_id = tc.ticket_category_id
             AND tc_sub.customer_id IS NOT NULL
             AND tc_sub.customer_id = :customerId
         )` : ''}
@@ -786,7 +786,7 @@ const getCountries = async (where = {}, pagination) => {
 class Address {
   /**
    * Creates an instance of Address.
-   * 
+   *
    * @constructor
    * @param {Object} data - The data object containing address details.
    * @param {number} data.id - The unique identifier of the address.
@@ -831,7 +831,7 @@ class Address {
 /**
  * Retrieves address data based on the provided geographic coordinates.
  *
- * This function executes a PostgreSQL function `mra_function_get_address_data_rs` to fetch address information 
+ * This function executes a PostgreSQL function `mra_function_get_address_data_rs` to fetch address information
  * for the given longitude and latitude. The results are mapped to instances of the `Address` class.
  *
  * @async
@@ -867,7 +867,7 @@ const getAddressData = async (longitude, latitude) => {
 class Location {
   /**
    * Creates an instance of Location.
-   * 
+   *
    * @constructor
    * @param {Object} data - The data object containing location details.
    * @param {number} data.country_id - The unique identifier of the country.
@@ -892,8 +892,8 @@ class Location {
 /**
  * Retrieves location data based on the provided geographic coordinates.
  *
- * This function executes the PostgreSQL function `mra_function_get_location_data_json` to fetch 
- * country, state, and city information for the given longitude and latitude. The results are 
+ * This function executes the PostgreSQL function `mra_function_get_location_data_json` to fetch
+ * country, state, and city information for the given longitude and latitude. The results are
  * mapped to an instance of the `Location` class.
  *
  * @async
@@ -923,8 +923,8 @@ const getLocationData = async (longitude, latitude) => {
 /**
  * Retrieves states for a given country based on its ISO code.
  *
- * This function calls the PostgreSQL function `mra_function_get_states_by_country_code` to fetch 
- * all states within the country identified by the given ISO code. The results 
+ * This function calls the PostgreSQL function `mra_function_get_states_by_country_code` to fetch
+ * all states within the country identified by the given ISO code. The results
  * are returned as an array of state objects.
  *
  * @async
@@ -949,8 +949,8 @@ const getStatesByCountryCode = async (countryCode) => {
 /**
  * Retrieves states for a given country based on its ID.
  *
- * This function calls the PostgreSQL function `mra_function_get_states_by_country_id` to fetch 
- * all states within the country identified by the given country ID. The results 
+ * This function calls the PostgreSQL function `mra_function_get_states_by_country_id` to fetch
+ * all states within the country identified by the given country ID. The results
  * are returned as an array of state objects.
  *
  * @async
@@ -976,8 +976,8 @@ const getStatesByCountryId = async (countryId) => {
 /**
  * Retrieves cities for a given state in a specified country.
  *
- * This function calls the PostgreSQL function `mra_function_get_cities_by_state` to fetch 
- * all cities that belong to the specified state within the given country. The results 
+ * This function calls the PostgreSQL function `mra_function_get_cities_by_state` to fetch
+ * all cities that belong to the specified state within the given country. The results
  * are returned as an array of city objects.
  *
  * @async
@@ -1001,28 +1001,9 @@ const getCitiesByState = async (countryId, stateId) => {
 };
 
 export {
-  closeDBConnections,
-  addDateRangeFilter,
-  convertSequelizeOperators,
-  insertAuditLog,
-  updateAuditLog,
-  deleteAuditLog,
-  getUserByUserId,
+  addDateRangeFilter, closeDBConnections, convertSequelizeOperators, createTicket, createUserDetails, deleteAuditLog, deleteTicket, getAddressData, getCitiesByState, getCountries, getGenderTypes, getLocationData, getStatesByCountryCode,
+  getStatesByCountryId, getTicketCategories, getTickets, getUserByUserId,
   getUserByUsername,
-  getUserDetails,
-  createUserDetails,
-  updateUserDetails,
-  getTickets,
-  createTicket,
-  updateTicket,
-  deleteTicket,
-  isPrivateCustomer,
-  getGenderTypes,
-  getTicketCategories,
-  getAddressData,
-  getLocationData,
-  getCountries,
-  getStatesByCountryCode,
-  getStatesByCountryId,
-  getCitiesByState
+  getUserDetails, insertAuditLog, isPrivateCustomer, updateAuditLog, updateTicket, updateUserDetails
 };
+

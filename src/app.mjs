@@ -61,12 +61,12 @@ const createApp = async () => {
     // Initialize i18next middleware BEFORE defining routes
     app.use(handle(i18next));
 
-    // When the Express app is behind a reverse proxy, the X-Forwarded-For header is used to 
-    // identify the original IP address of the client connecting to the app through the proxy. 
-    // However, for security reasons, Express does not trust this header by default. It is needed 
-    // to explicitly enable it by setting trust proxy in the Express configuration. 
-    // Failing to do so can prevent middlewares like express-rate-limit from accurately 
-    // identifying users, leading to potential issues with rate limiting.    
+    // When the Express app is behind a reverse proxy, the X-Forwarded-For header is used to
+    // identify the original IP address of the client connecting to the app through the proxy.
+    // However, for security reasons, Express does not trust this header by default. It is needed
+    // to explicitly enable it by setting trust proxy in the Express configuration.
+    // Failing to do so can prevent middlewares like express-rate-limit from accurately
+    // identifying users, leading to potential issues with rate limiting.
     app.set('trust proxy', 1);
 
     // Built-in middleware for parsing JSON and URL-encoded bodies
@@ -100,7 +100,7 @@ const createApp = async () => {
     app.use(cors(corsOptions));
 
     // Basic Helmet usage
-    app.use(helmet()); // It sets up Helmet with its default configuration. Helmet, by default, includes a set of middlewares that set HTTP headers for basic security protections. 
+    app.use(helmet()); // It sets up Helmet with its default configuration. Helmet, by default, includes a set of middlewares that set HTTP headers for basic security protections.
 
     // Content Security Policy (CSP), which helps prevent attacks like Cross-Site Scripting (XSS) and data injection.
     app.use(

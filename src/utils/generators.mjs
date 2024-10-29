@@ -18,7 +18,7 @@ export { generateRandomString };
  * Generates a mock user object for a user route.
  * This function creates a random username and uses it to construct an email.
  * It also sets a predefined password and a login redirect URL.
- * 
+ *
  * @returns {Object} An object containing username, email, password, and loginRedirectURL.
  */
 const generateMockUserRoute = () => {

@@ -1,10 +1,11 @@
+import { converters } from '@reportcycle/mra-utils';
 import { Router } from 'express';
 import { query } from 'express-validator';
-import { toLowerCamelCase } from '../../utils/converters.mjs';
 import { getAddressData, getCitiesByState, getCountries, getLocationData, getStatesByCountryCode, getStatesByCountryId } from '../../utils/database.mjs';
 import { updateEventLog } from '../../utils/logger.mjs';
 import { apiRequestLimiter } from '../../utils/rateLimit.mjs';
 import { authorizeUser, checkRequestValidity } from '../../utils/validations.mjs';
+const { toLowerCamelCase } = converters;
 const router = Router();
 export default router;
 
@@ -103,11 +104,11 @@ export default router;
  *                   items:
  *                     type: object
  *                     properties:
- *                       type: 
+ *                       type:
  *                         type: string
  *                         description: The type of validation error (e.g., "field").
  *                         example: "field"
- *                       value: 
+ *                       value:
  *                         type: string
  *                         description: The value that caused the validation error.
  *                         example: "0"
@@ -161,7 +162,7 @@ router.get('/countries', apiRequestLimiter,
       .optional()
       .isInt({ min: 1 }).withMessage((_, { req }) => req.t('Page must be a positive integer number.'))
       .toInt()
-      .default(1),  
+      .default(1),
 
     query('limit')
       .optional()
@@ -184,17 +185,17 @@ router.get('/countries', apiRequestLimiter,
   (req, res, next) => {
     const { countryCode, countryName, isSupported } = req.query;
     const where = { is_valid: true };
-    if (countryCode) 
+    if (countryCode)
       where.iso_code = countryCode;
-    if (countryName) 
+    if (countryName)
       where.country_name = { ['Sequelize.Op.iLike']: `%${countryName}%` };
-    if (isSupported !== undefined) 
+    if (isSupported !== undefined)
       where.is_supported = isSupported;
-    
+
     const middleware = authorizeUser({ dom: '0', obj: 'mrag_countries', act: 'R', attrs: { where } });
     middleware(req, res, next);
   },
-  async (req, res) => {    
+  async (req, res) => {
     const { limit } = req.query;
 
     try {
@@ -207,7 +208,7 @@ router.get('/countries', apiRequestLimiter,
       const hasMore = countries.length > limit;
       const data = hasMore ? countries.slice(0, limit) : countries;
 
-      return res.json({data, hasMore});
+      return res.json({ data, hasMore });
     } catch (err) {
       updateEventLog(req, err);
       return res.status(500).json({ message: err.message });
@@ -331,11 +332,11 @@ router.get('/countries', apiRequestLimiter,
  *                   items:
  *                     type: object
  *                     properties:
- *                       type: 
+ *                       type:
  *                         type: string
  *                         description: The type of validation error (e.g., "field").
  *                         example: "field"
- *                       value: 
+ *                       value:
  *                         type: string
  *                         description: The value that caused the validation error.
  *                         example: "190"
@@ -373,14 +374,14 @@ router.get('/addresses', apiRequestLimiter,
       .exists().withMessage((_, { req }) => req.t('Longitude is required.'))
       .isFloat({ min: -180, max: 180 }).withMessage((_, { req }) => req.t('Longitude must be a number between -180 and 180.'))
       .toFloat(),
-  
+
     query('latitude')
       .exists().withMessage((_, { req }) => req.t('Latitude is required.'))
       .isFloat({ min: -90, max: 90 }).withMessage((_, { req }) => req.t('Latitude must be a number between -90 and 90.'))
       .toFloat(),
-  ],  
+  ],
   checkRequestValidity,
-  (req, res, next) => {    
+  (req, res, next) => {
     const middleware = authorizeUser({ dom: '0', obj: 'mrag_addresses', act: 'R', attrs: {} });
     middleware(req, res, next);
   },
@@ -395,7 +396,7 @@ router.get('/addresses', apiRequestLimiter,
         return res.status(404).json({ message: req.t('Address data not found.') });
       }
 
-      return res.json({data: addressDataArray.map(item => toLowerCamelCase(item))});
+      return res.json({ data: addressDataArray.map(item => toLowerCamelCase(item)) });
     } catch (err) {
       updateEventLog(req, err);
       return res.status(500).json({ message: err.message });
@@ -477,11 +478,11 @@ router.get('/addresses', apiRequestLimiter,
  *                   items:
  *                     type: object
  *                     properties:
- *                       type: 
+ *                       type:
  *                         type: string
  *                         description: The type of validation error (e.g., "field").
  *                         example: "field"
- *                       value: 
+ *                       value:
  *                         type: string
  *                         description: The value that caused the validation error.
  *                         example: "190"
@@ -518,14 +519,14 @@ router.get('/location', apiRequestLimiter,
       .exists().withMessage((_, { req }) => req.t('Longitude is required.'))
       .isFloat({ min: -180, max: 180 }).withMessage((_, { req }) => req.t('Longitude must be a number between -180 and 180.'))
       .toFloat(),
-  
+
     query('latitude')
       .exists().withMessage((_, { req }) => req.t('Latitude is required.'))
       .isFloat({ min: -90, max: 90 }).withMessage((_, { req }) => req.t('Latitude must be a number between -90 and 90.'))
       .toFloat(),
   ],
   checkRequestValidity,
-  (req, res, next) => {    
+  (req, res, next) => {
     const middleware = authorizeUser({ dom: '0', obj: 'mrag_addresses', act: 'R', attrs: {} });
     middleware(req, res, next);
   },
@@ -540,7 +541,7 @@ router.get('/location', apiRequestLimiter,
         return res.status(404).json({ message: req.t('Location data not found.') });
       }
 
-      return res.json({data: toLowerCamelCase(locationData)});
+      return res.json({ data: toLowerCamelCase(locationData) });
     } catch (err) {
       updateEventLog(req, err);
       return res.status(500).json({ message: err.message });
@@ -598,11 +599,11 @@ router.get('/location', apiRequestLimiter,
  *                   items:
  *                     type: object
  *                     properties:
- *                       type: 
+ *                       type:
  *                         type: string
  *                         description: The type of validation error (e.g., "field").
  *                         example: "field"
- *                       value: 
+ *                       value:
  *                         type: string
  *                         description: The value that caused the validation error.
  *                         example: "c2"
@@ -643,7 +644,7 @@ router.get('/statesByCountryCode', apiRequestLimiter,
       .toUpperCase(),
   ],
   checkRequestValidity,
-  (req, res, next) => {    
+  (req, res, next) => {
     const middleware = authorizeUser({ dom: '0', obj: 'mrag_addresses', act: 'R', attrs: {} });
     middleware(req, res, next);
   },
@@ -657,7 +658,7 @@ router.get('/statesByCountryCode', apiRequestLimiter,
         return res.status(404).json({ message: req.t('States not found.') });
       }
 
-      return res.json({ data: states.map(item => toLowerCamelCase(item))});
+      return res.json({ data: states.map(item => toLowerCamelCase(item)) });
     } catch (err) {
       updateEventLog(req, err);
       return res.status(500).json({ message: err.message });
@@ -715,11 +716,11 @@ router.get('/statesByCountryCode', apiRequestLimiter,
  *                   items:
  *                     type: object
  *                     properties:
- *                       type: 
+ *                       type:
  *                         type: string
  *                         description: The type of validation error (e.g., "field").
  *                         example: "field"
- *                       value: 
+ *                       value:
  *                         type: string
  *                         description: The value that caused the validation error.
  *                         example: "-5"
@@ -758,7 +759,7 @@ router.get('/statesByCountryId', apiRequestLimiter,
       .toInt(),
   ],
   checkRequestValidity,
-  (req, res, next) => {    
+  (req, res, next) => {
     const middleware = authorizeUser({ dom: '0', obj: 'mrag_addresses', act: 'R', attrs: {} });
     middleware(req, res, next);
   },
@@ -772,7 +773,7 @@ router.get('/statesByCountryId', apiRequestLimiter,
         return res.status(404).json({ message: req.t('States not found.') });
       }
 
-      return res.json({ data: states.map(item => toLowerCamelCase(item))});
+      return res.json({ data: states.map(item => toLowerCamelCase(item)) });
     } catch (err) {
       updateEventLog(req, err);
       return res.status(500).json({ message: err.message });
@@ -836,11 +837,11 @@ router.get('/statesByCountryId', apiRequestLimiter,
  *                   items:
  *                     type: object
  *                     properties:
- *                       type: 
+ *                       type:
  *                         type: string
  *                         description: The type of validation error (e.g., "field").
  *                         example: "field"
- *                       value: 
+ *                       value:
  *                         type: string
  *                         description: The value that caused the validation error.
  *                         example: "-5"
@@ -884,7 +885,7 @@ router.get('/citiesByState', apiRequestLimiter,
       .toInt(),
   ],
   checkRequestValidity,
-  (req, res, next) => {    
+  (req, res, next) => {
     const middleware = authorizeUser({ dom: '0', obj: 'mrag_addresses', act: 'R', attrs: {} });
     middleware(req, res, next);
   },
@@ -899,7 +900,7 @@ router.get('/citiesByState', apiRequestLimiter,
         return res.status(404).json({ message: req.t('Cities not found.') });
       }
 
-      return res.json({data: cities.map(item => toLowerCamelCase(item))});
+      return res.json({ data: cities.map(item => toLowerCamelCase(item)) });
     } catch (err) {
       updateEventLog(req, err);
       return res.status(500).json({ message: err.message });

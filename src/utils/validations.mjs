@@ -69,7 +69,7 @@ const authorizeUser = (extraData) => async (req, res, next) => {
         const response = await isUserAuthorized(extraData, req);
 
         const { user, roles, conditions } = response.data;
-        if(!req.logId) {
+        if (!req.logId) {
             const logId = await createEventLog(req, user.userId);
             req.logId = logId;
             req.user = user;
@@ -79,11 +79,11 @@ const authorizeUser = (extraData) => async (req, res, next) => {
             req.user = user;
             req.roles = roles;
             req.conditions = conditions;
-            await updateEventLog(req, { success: 'User has been authorized.', details: response.data});
+            await updateEventLog(req, { success: 'User has been authorized.', details: response.data });
         }
         next();
     } catch (error) {
-        await updateEventLog(req, { error: 'Error in authorize user.', details: error});
+        await updateEventLog(req, { error: 'Error in authorize user.', details: error });
         if (error.response) {
             // Relay the entire response from the external service
             return res.status(error.response.status).json(error.response.data);
@@ -115,7 +115,7 @@ const isUserAuthorized = async (extraData, req) => {
             act: extraData.act,
             attrs: extraData.attrs ?? {}
         };
-        
+
         const serviceUrl = process.env.AUTH_SERVER_URL + '/v1/authorize';
 
         const authHeader = req.headers['authorization'];

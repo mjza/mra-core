@@ -1,11 +1,12 @@
+import { converters } from '@reportcycle/mra-utils';
 import { Router } from 'express';
 import { body, param, query } from 'express-validator';
 import moment from 'moment';
-import { decryptObjectItems, encryptObjectItems, toLowerCamelCase, toSnakeCase } from '../../utils/converters.mjs';
 import { createUserDetails, getUserDetails, updateUserDetails } from '../../utils/database.mjs';
 import { updateEventLog } from '../../utils/logger.mjs';
 import { apiRequestLimiter } from '../../utils/rateLimit.mjs';
 import { authorizeUser, checkRequestValidity } from '../../utils/validations.mjs';
+const { decryptObjectItems, encryptObjectItems, toLowerCamelCase, toSnakeCase } = converters;
 const router = Router();
 
 // List of optional properties
@@ -31,7 +32,7 @@ class UserDetails {
    * Constructor for creating a userDetails object.
    * Only allows specific properties to ensure security by eliminating extra or unwanted properties.
    * @param {Object} userDetails - Object containing user details.
-   * @param {number} userDetails.userId - UserId of the detail owner. 
+   * @param {number} userDetails.userId - UserId of the detail owner.
    * @param {string} userDetails.firstName - First name of the user.
    * @param {string} [userDetails.middleName] - Middle name of the user.
    * @param {string} userDetails.lastName - Last name of the user.
@@ -74,10 +75,10 @@ class UserDetails {
  *   responses:
  *     UserDetailsObject:
  *       type: object
- *       properties:  
+ *       properties:
  *         userId:
- *           type: integer   
- *           example: 1            
+ *           type: integer
+ *           example: 1
  *         firstName:
  *           type: string
  *           example: "Jorg"
@@ -132,10 +133,10 @@ class UserDetails {
  *               example: "Female"
  *     BeforeCreationUserDetailsObject:
  *       type: object
- *       properties:  
+ *       properties:
  *         userId:
- *           type: integer   
- *           example: 1            
+ *           type: integer
+ *           example: 1
  *         email:
  *           type: string
  *           example: "a@example.com"
@@ -263,12 +264,12 @@ router.get('/user_details', apiRequestLimiter,
       .optional({ checkFalsy: true })
       .isInt({ min: 1 }).withMessage((_, { req }) => req.t('UserId must be a positive integer number.'))
       .toInt(),
-    
+
     query('page')
       .optional()
       .isInt({ min: 1 }).withMessage((_, { req }) => req.t('Page must be a positive integer number.'))
       .toInt()
-      .default(1),  
+      .default(1),
 
     query('limit')
       .optional()
@@ -296,14 +297,14 @@ router.get('/user_details', apiRequestLimiter,
     try {
 
       const userDetailsArray = await getUserDetails(req.conditions.where, req.pagination);
-      
+
       if (!userDetailsArray || userDetailsArray.length === 0) {
         return res.status(404).json({ message: req.t('User details not found.') });
       }
 
       // Determine if there are more items beyond the current page
       const hasMore = userDetailsArray.length > (req.pagination.limit - 1);
-      const results = hasMore ? userDetailsArray.slice(0, -1) : userDetailsArray; // Remove the extra item if present      
+      const results = hasMore ? userDetailsArray.slice(0, -1) : userDetailsArray; // Remove the extra item if present
 
       const decryptedDataArray = results.map(userDetails => {
         // Copy the array and add a new item
@@ -357,7 +358,7 @@ router.get('/user_details', apiRequestLimiter,
  *                 example: "a@b.com"
  *               genderId:
  *                 type: integer
- *                 example: 1 
+ *                 example: 1
  *               dateOfBirth:
  *                 type: string
  *                 format: date
@@ -585,7 +586,7 @@ router.post('/user_details', apiRequestLimiter,
  *                 example: "a@b.com"
  *               genderId:
  *                 type: integer
- *                 example: 2 
+ *                 example: 2
  *               dateOfBirth:
  *                 type: string
  *                 format: date
@@ -688,7 +689,7 @@ router.put('/user_details/:userId', apiRequestLimiter,
       .isEmail()
       .withMessage((_, { req }) => req.t('Invalid email address.'))
       .isLength({ min: 5, max: 255 })
-      .withMessage((_, { req }) => req.t('Email must be between 5 and 255 characters.')),  
+      .withMessage((_, { req }) => req.t('Email must be between 5 and 255 characters.')),
 
     body('genderId')
       .optional({ nullable: true })
@@ -739,7 +740,7 @@ router.put('/user_details/:userId', apiRequestLimiter,
       // Copy the array and add a new item
       const newSecretProperties = userDetails.is_private_picture === true ? [...secretProperties, 'profile_picture_url'] : [...secretProperties];
       const updatedUserDetails = await updateUserDetails(encryptObjectItems(userDetails, newSecretProperties), req.conditions.where, req.language);
-      if(!updatedUserDetails.creator){
+      if (!updatedUserDetails.creator) {
         return res.status(206).json(toLowerCamelCase(decryptObjectItems(updatedUserDetails, newSecretProperties)));
       }
       return res.status(200).json(toLowerCamelCase(decryptObjectItems(updatedUserDetails, newSecretProperties)));

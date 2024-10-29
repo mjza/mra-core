@@ -24,7 +24,7 @@ import rateLimit from 'express-rate-limit';
 /**
  * Rate limit configuration for the general API usage.
  * Limits the number of requests an IP can make in a set time window.
- * 
+ *
  * @const
  * @type {rateLimit}
  * @property {number} windowMs - The time frame for calculating the number of requests in milliseconds (15 minutes).
@@ -39,11 +39,11 @@ const apiRequestLimiter = rateLimit({
     },
     skip: (req, _) => {
         const developmentToken = req.headers['x-development-token'];
-        if (developmentToken) {            
+        if (developmentToken) {
             return developmentToken === process.env.X_DEVELOPMENT_TOKEN;
         }
         // Do not skip in production
-        return false; 
+        return false;
     }
 });
 

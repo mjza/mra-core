@@ -1,10 +1,11 @@
+import { converters } from '@reportcycle/mra-utils';
 import { Router } from 'express';
 import { query } from 'express-validator';
-import { toLowerCamelCase } from '../../utils/converters.mjs';
 import { isPrivateCustomer as _isPrivateCustomer, getGenderTypes, getTicketCategories } from '../../utils/database.mjs';
 import { updateEventLog } from '../../utils/logger.mjs';
 import { apiRequestLimiter } from '../../utils/rateLimit.mjs';
 import { authorizeUser, checkRequestValidity } from '../../utils/validations.mjs';
+const { toLowerCamelCase } = converters;
 
 const router = Router();
 
@@ -84,7 +85,7 @@ router.get('/gender_types', apiRequestLimiter,
       .optional()
       .isInt({ min: 1 }).withMessage((_, { req }) => req.t('Page must be a positive integer number.'))
       .toInt()
-      .default(1),  
+      .default(1),
 
     query('limit')
       .optional()
@@ -103,7 +104,7 @@ router.get('/gender_types', apiRequestLimiter,
     next();
   },
   async (req, res, next) => {
-    const middleware = authorizeUser({ dom: '0', obj: 'mra_gender_types', act: 'R', attrs: { } });
+    const middleware = authorizeUser({ dom: '0', obj: 'mra_gender_types', act: 'R', attrs: {} });
     middleware(req, res, next);
   },
   async (req, res) => {
@@ -231,12 +232,12 @@ router.get('/ticket_categories', apiRequestLimiter,
     query('ticketTitle')
       .optional({ checkFalsy: true })
       .isString().withMessage((_, { req }) => req.t('TicketTitle must be a string.')),
-    
+
     query('longitude')
       .optional()
       .isFloat({ min: -180, max: 180 }).withMessage((_, { req }) => req.t('Longitude must be a number between -180 and 180.'))
       .toFloat(),
-  
+
     query('latitude')
       .optional()
       .isFloat({ min: -90, max: 90 }).withMessage((_, { req }) => req.t('Latitude must be a number between -90 and 90.'))
@@ -250,13 +251,13 @@ router.get('/ticket_categories', apiRequestLimiter,
     query('customerTypeId')
       .optional({ checkFalsy: true })
       .isInt({ min: 1 }).withMessage((_, { req }) => req.t('CustomerTypeId must be a positive integer number.'))
-      .toInt(),  
+      .toInt(),
 
     query('page')
       .optional()
       .isInt({ min: 1 }).withMessage((_, { req }) => req.t('Page must be a positive integer number number.'))
       .toInt()
-      .default(1),  
+      .default(1),
 
     query('limit')
       .optional()
@@ -278,7 +279,7 @@ router.get('/ticket_categories', apiRequestLimiter,
     const customerId = req.query.customerId;
     const isPrivateCustomer = await _isPrivateCustomer(customerId);
     const domain = isPrivateCustomer ? String(customerId) : '0';
-    const middleware = authorizeUser({ dom: domain, obj: 'mra_ticket_categories', act: 'R', attrs: { } });
+    const middleware = authorizeUser({ dom: domain, obj: 'mra_ticket_categories', act: 'R', attrs: {} });
     middleware(req, res, next);
   },
   async (req, res) => {

@@ -1,0 +1,12 @@
+[Label] Title of the commit message
+
+Detailed description of the changes made, reasons, and any other relevant information.
+
+# Labels:
+# [Feature]
+# [Bugfix]
+# [Documentation]
+# [Git]
+# [Test]
+# [Package]
+# [Update]

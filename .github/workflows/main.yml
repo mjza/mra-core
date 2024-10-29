@@ -24,6 +24,7 @@ jobs:
       DB_PORT: ${{ secrets.DB_PORT }}
       SECRET_KEY: ${{ secrets.SECRET_KEY }}
       X_DEVELOPMENT_TOKEN: ${{ secrets.X_DEVELOPMENT_TOKEN }}
+      MY_PAT: ${{ secrets.MY_PAT }}
       # Setting an environment variable with the value of a configuration variable
       BASE_URL: ${{ vars.BASE_URL }}
       PORT: ${{ vars.PORT }}

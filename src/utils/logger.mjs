@@ -1,5 +1,6 @@
-import { convertRequestData } from './converters.mjs';
+import { converters } from '@reportcycle/mra-utils';
 import { insertAuditLog, updateAuditLog } from './database.mjs';
+const { convertRequestData } = converters;
 
 /**
  * Creates an event log entry in the database based on the incoming request and user ID.
@@ -7,13 +8,13 @@ import { insertAuditLog, updateAuditLog } from './database.mjs';
  * IP address, and user ID, and logs these details into the database. It is primarily used
  * for audit purposes, tracking the requests made to the server along with the authenticated
  * user making the request.
- * 
+ *
  * @param {Object} req - The Express request object. It provides access to the request's
  *                       method, URL, headers, and IP address.
  * @returns {Promise<number>} A promise that resolves to the ID of the created log entry
  *                            in the database. If the function encounters an error during
  *                            execution, it resolves to 0.
- * 
+ *
  * @async
  */
 const createEventLog = async (req, userId) => {

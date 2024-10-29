@@ -18,7 +18,7 @@ describe('Generator Functions', () => {
             expect(result).toHaveLength(length);
         });
     });
-    
+
     describe('generateMockUserRoute', () => {
         it('should generate a user object with loginRedirectURL', () => {
             const user = generateMockUserRoute();
