@@ -1,10 +1,11 @@
-import { converters } from '@reportcycle/mra-utils';
+import { converters, validations } from '@reportcycle/mra-utils';
 import { Router } from 'express';
 import { body, oneOf, param, query } from 'express-validator';
 import { isPrivateCustomer as _isPrivateCustomer, addDateRangeFilter, createTicket, deleteTicket, getTickets, updateTicket } from '../../utils/database.mjs';
 import { updateEventLog } from '../../utils/logger.mjs';
 import { apiRequestLimiter } from '../../utils/rateLimit.mjs';
-import { authorizeUser, checkRequestValidity, isUserAuthorized } from '../../utils/validations.mjs';
+import { authorizeUser, isUserAuthorized } from '../../utils/validations.mjs';
+const { checkRequestValidity } = validations;
 const { toLowerCamelCase, toSnakeCase } = converters;
 const router = Router();
 export default router;

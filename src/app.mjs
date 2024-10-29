@@ -1,3 +1,4 @@
+import { validations } from '@reportcycle/mra-utils';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express, { json, static as serveStatic, urlencoded } from 'express';
@@ -11,7 +12,7 @@ import swaggerJSDoc from 'swagger-jsdoc';
 import { serve, setup } from 'swagger-ui-express';
 import v1Routes from './routes/v1/routes.mjs';
 import { closeDBConnections } from './utils/database.mjs';
-import { checkJSONBody } from './utils/validations.mjs';
+const { checkJSONBody } = validations;
 
 /**
  * Asynchronously initializes and configures the Express application. This function

@@ -1,11 +1,12 @@
-import { converters } from '@reportcycle/mra-utils';
+import { converters, validations } from '@reportcycle/mra-utils';
 import { Router } from 'express';
 import { body, param, query } from 'express-validator';
 import moment from 'moment';
 import { createUserDetails, getUserDetails, updateUserDetails } from '../../utils/database.mjs';
 import { updateEventLog } from '../../utils/logger.mjs';
 import { apiRequestLimiter } from '../../utils/rateLimit.mjs';
-import { authorizeUser, checkRequestValidity } from '../../utils/validations.mjs';
+import { authorizeUser } from '../../utils/validations.mjs';
+const { checkRequestValidity } = validations;
 const { decryptObjectItems, encryptObjectItems, toLowerCamelCase, toSnakeCase } = converters;
 const router = Router();
 
