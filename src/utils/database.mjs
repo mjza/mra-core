@@ -125,6 +125,31 @@ const convertSequelizeOperators = (where) => {
 }
 
 /**
+ * Retrieves an audit log from the database based on the logId.
+ *
+ * @param {number} logId - The ID of the log entry to be retrieved.
+ * @returns {Object|null} The log object if found, or null if not found.
+ */
+export const getAuditLogById = async (logId) => {
+  if (isNaN(logId) || logId <= 0) {
+    return null;
+  }
+
+  try {
+    const log = await MraAuditLogsCore.findOne({
+      where: {
+        log_id: logId,
+      },
+    });
+
+    return log ? log.get({ plain: true }) : null;
+  } catch (err) {
+    console.error(`Error retrieving audit log with ID ${logId}:`, err);
+    return null;
+  }
+};
+
+/**
  * Inserts a new audit log into the database.
  *
  * @param {Object} log - The log object { methodRoute, req, comments, ipAddress, userId } containing methodRoute, req, comment, ipAddress, and userId.

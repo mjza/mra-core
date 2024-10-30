@@ -17,7 +17,7 @@ const { convertRequestData } = converters;
  *
  * @async
  */
-const createEventLog = async (req, userId) => {
+export const createEventLog = async (req, userId) => {
     try {
         const methodRoute = req.method + ":" + (req.headers.path ? req.headers.path : req.url);
         const reqJson = convertRequestData(req);
@@ -27,12 +27,9 @@ const createEventLog = async (req, userId) => {
         const res = await insertAuditLog(log);
         return res.log_id;
     } catch (err) {
-        console.error(err);
         return 0;
     }
 };
-
-export { createEventLog };
 
 /**
  * Records an error or an extra log in the database for a specific request.
@@ -42,7 +39,7 @@ export { createEventLog };
  * @param {string} comments - Additional comments or error information.
  * @returns {string|null} The updated comments of the log entry, or null in case of failure.
  */
-const updateEventLog = async (req, comments) => {
+export const updateEventLog = async (req, comments) => {
     try {
         if (isNaN(req.logId) || req.logId <= 0) {
             return null;
@@ -56,8 +53,6 @@ const updateEventLog = async (req, comments) => {
         return null;
     }
 };
-
-export { updateEventLog };
 
 /**
  * Middleware function to create an audit log for each request.
