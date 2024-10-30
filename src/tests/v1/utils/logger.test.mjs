@@ -229,12 +229,10 @@ describe('Event Log Tests', () => {
     // Ensure the app resources are closed after all tests
     afterAll(async () => {
         try {
-            /*
             if (logId) {
                 const res = await deleteAuditLog(logId);
                 expect(res).toBeTruthy();
             }
-            */
             headers['Authorization'] = `Bearer ${authData.token}`;
             await axiosInstance.delete(`${process.env.AUTH_SERVER_URL}/v1/deregister`, { headers });
         } catch (error) {
