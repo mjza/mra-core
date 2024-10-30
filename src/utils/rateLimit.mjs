@@ -13,7 +13,7 @@ import rateLimit from 'express-rate-limit';
  *             properties:
  *               message:
  *                 type: string
- *                 example: Too many requests from this IP, please try again after 15 minutes.
+ *                 example: Too many requests from this IP, please try again after 1 minutes.
  *       headers:
  *         Retry-After:
  *           description: Indicates how long the user should wait before making a new request.
@@ -27,15 +27,15 @@ import rateLimit from 'express-rate-limit';
  *
  * @const
  * @type {rateLimit}
- * @property {number} windowMs - The time frame for calculating the number of requests in milliseconds (15 minutes).
- * @property {number} max - The maximum number of requests allowed per IP in the specified window (100 requests per 15 minutes).
+ * @property {number} windowMs - The time frame for calculating the number of requests in milliseconds (1 minutes).
+ * @property {number} max - The maximum number of requests allowed per IP in the specified window (100 requests per 1 minutes).
  * @property {string} message - The message returned when the rate limit is exceeded.
  */
-const apiRequestLimiter = rateLimit({
+export const apiRequestLimiter = rateLimit({
     windowMs: 1 * 60 * 1000, // 1 minutes in milliseconds
-    max: 60, // Limit each IP to 60 requests per `window` (here, per 15 minutes)
+    max: 60, // Limit each IP to 60 requests per `window` (here, per 1 minutes)
     message: (req, _) => {
-        return { message: req.t('Too many requests from this IP, please try again after 15 minutes.') };
+        return { message: req.t('Too many requests from this IP, please try again after 1 minutes.') };
     },
     skip: (req, _) => {
         const developmentToken = req.headers['x-development-token'];
@@ -46,5 +46,3 @@ const apiRequestLimiter = rateLimit({
         return false;
     }
 });
-
-export { apiRequestLimiter };

@@ -306,7 +306,7 @@ describe('/user_details endpoints', () => {
 
             expect(res.statusCode).toBe(429);
             expect(res.body.message).toBeDefined();
-            expect(res.body.message).toBe('Too many requests from this IP, please try again after 15 minutes.');
+            expect(res.body.message).toBe('Too many requests from this IP, please try again after 1 minutes.');
             expect(res.headers).toHaveProperty('retry-after');
             expect(parseInt(res.headers['retry-after'])).toBeGreaterThan(0);
 
@@ -314,7 +314,7 @@ describe('/user_details endpoints', () => {
 
             expect(res.statusCode).toBe(429);
             expect(res.body.message).toBeDefined();
-            expect(res.body.message).toBe('Too many requests from this IP, please try again after 15 minutes.');
+            expect(res.body.message).toBe('Too many requests from this IP, please try again after 1 minutes.');
             expect(res.headers).toHaveProperty('retry-after');
             expect(parseInt(res.headers['retry-after'])).toBeGreaterThan(0);
 
@@ -322,7 +322,7 @@ describe('/user_details endpoints', () => {
 
             expect(res.statusCode).toBe(429);
             expect(res.body.message).toBeDefined();
-            expect(res.body.message).toBe('Too many requests from this IP, please try again after 15 minutes.');
+            expect(res.body.message).toBe('Too many requests from this IP, please try again after 1 minutes.');
             expect(res.headers).toHaveProperty('retry-after');
             expect(parseInt(res.headers['retry-after'])).toBeGreaterThan(0);
         });
