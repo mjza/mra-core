@@ -9,6 +9,7 @@ const { checkRequestValidity } = validations;
 const { toLowerCamelCase } = converters;
 
 const router = Router();
+export default router;
 
 /**
  * @swagger
@@ -303,5 +304,3 @@ router.get('/ticket_categories', apiRequestLimiter,
     }
   }
 );
-
-export default router;

@@ -3,7 +3,7 @@
  * @param {number} [length=8] - The length of the string to generate. Default is 8 characters.
  * @returns {string} A random string of the specified length.
  */
-const generateRandomString = (length = 8) => {
+export const generateRandomString = (length = 8) => {
     const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let str = '';
     for (let i = 0; i < length; i++) {
@@ -12,8 +12,6 @@ const generateRandomString = (length = 8) => {
     return str;
 };
 
-export { generateRandomString };
-
 /**
  * Generates a mock user object for a user route.
  * This function creates a random username and uses it to construct an email.
@@ -21,7 +19,7 @@ export { generateRandomString };
  *
  * @returns {Object} An object containing username, email, password, and loginRedirectURL.
  */
-const generateMockUserRoute = () => {
+export const generateMockUserRoute = () => {
     var username = generateRandomString();
     return {
         username: username,
@@ -30,6 +28,3 @@ const generateMockUserRoute = () => {
         loginRedirectURL: 'http://example.com/'
     }
 };
-
-export { generateMockUserRoute };
-

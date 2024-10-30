@@ -8,7 +8,9 @@ import { apiRequestLimiter } from '../../utils/rateLimit.mjs';
 import { authorizeUser } from '../../utils/validations.mjs';
 const { checkRequestValidity } = validations;
 const { decryptObjectItems, encryptObjectItems, toLowerCamelCase, toSnakeCase } = converters;
+
 const router = Router();
+export default router;
 
 // List of optional properties
 const optionalProperties = [
@@ -756,5 +758,3 @@ router.put('/user_details/:userId', apiRequestLimiter,
     }
   }
 );
-
-export default router;

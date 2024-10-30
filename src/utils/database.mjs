@@ -5,7 +5,7 @@ const { Op } = Sequelize;
 /**
  * Closes the database connection pool.
  */
-const closeDBConnections = async () => {
+export const closeDBConnections = async () => {
   await closeSequelize();
 };
 
@@ -20,7 +20,7 @@ const closeDBConnections = async () => {
  *                         The function expects to find query parameters with names formed by appending
  *                         'After' and 'Before' to this base field name (e.g., 'createdAtAfter' for 'createdAt').
  */
-const addDateRangeFilter = (where, query, field) => {
+export const addDateRangeFilter = (where, query, field) => {
   const fieldAfter = `${field}After`;
   const fieldBefore = `${field}Before`;
 
@@ -73,7 +73,7 @@ const addDateRangeFilter = (where, query, field) => {
  * // }
  * // which is suitable for use in Sequelize queries.
  */
-const convertSequelizeOperators = (where) => {
+export const convertSequelizeOperators = (where) => {
   const opMap = {
     'Sequelize.Op.or': Op.or,
     'Sequelize.Op.and': Op.and,
@@ -155,7 +155,7 @@ export const getAuditLogById = async (logId) => {
  * @param {Object} log - The log object { methodRoute, req, comments, ipAddress, userId } containing methodRoute, req, comment, ipAddress, and userId.
  * @returns {Object} The inserted log object.
  */
-const insertAuditLog = async (log) => {
+export const insertAuditLog = async (log) => {
   const { methodRoute, req, comments, ipAddress, userId } = log;
   const insertedLog = await MraAuditLogsCore.create({
     method_route: methodRoute,
@@ -173,7 +173,7 @@ const insertAuditLog = async (log) => {
  * @param {Object} log - The log object { logId, comments } containing logId, methodRoute, req, comment, ipAddress, and userId.
  * @returns {Object} The updated log object.
  */
-const updateAuditLog = async (log) => {
+export const updateAuditLog = async (log) => {
   const { logId, comments } = log;
   if (isNaN(logId))
     return null;
@@ -195,7 +195,7 @@ const updateAuditLog = async (log) => {
  * @param {number} logId - The ID of the log to be deleted.
  * @returns {Object} An object indicating the success of the deletion.
  */
-const deleteAuditLog = async (logId) => {
+export const deleteAuditLog = async (logId) => {
   if (isNaN(logId))
     return { success: false };
 
@@ -222,7 +222,7 @@ const deleteAuditLog = async (logId) => {
  * @returns {Promise<Array<Object>>} A promise that resolves to an array of gender types.
  * @throws {Error} If there is an error fetching gender types from the database.
  */
-const getGenderTypes = async (where, pagination) => {
+export const getGenderTypes = async (where, pagination) => {
   let { limit, offset } = pagination;
 
   if (isNaN(limit) || limit <= 0)
@@ -257,7 +257,7 @@ const getGenderTypes = async (where, pagination) => {
  *                     updator, and updated_at. Caller must pass `limit + 1` so if more items
  *                     are available, allowing the caller to determine if additional pages exist.
  */
-const getUserDetails = async (where, pagination) => {
+export const getUserDetails = async (where, pagination) => {
   let { limit, offset } = pagination ?? {};
 
   if (isNaN(limit) || limit <= 0)
@@ -347,7 +347,7 @@ const getUserDetails = async (where, pagination) => {
  * @returns {Promise<Object>} The updated userDetails object.
  * @throws {Error} If the user's profile picture URL could not be stored publicly.
  */
-const storeUserPublicInformation = async (userDetails, where, lang) => {
+const _storeUserPublicInformation = async (userDetails, where, lang) => {
   let public_profile_picture_url;
   if (userDetails.is_private_picture === true) {
     public_profile_picture_url = null;
@@ -435,9 +435,9 @@ class UserDetails {
  * @param {String} lang - The locale for translation of error message
  * @returns {Object} The created user details object.
  */
-const createUserDetails = async (userDetails, lang) => {
+export const createUserDetails = async (userDetails, lang) => {
   userDetails = new UserDetails(userDetails);
-  userDetails = await storeUserPublicInformation(userDetails, null, lang);
+  userDetails = await _storeUserPublicInformation(userDetails, null, lang);
   await MraUserDetails.create(userDetails);
   const results = await getUserDetails({ user_id: userDetails.user_id }, { limit: 1, offset: 0 });
   return results && results[0];
@@ -451,9 +451,9 @@ const createUserDetails = async (userDetails, lang) => {
  * @param {String} lang - The locale for translation of error message
  * @returns {Object} The updated user details object.
  */
-const updateUserDetails = async (userDetails, where, lang) => {
+export const updateUserDetails = async (userDetails, where, lang) => {
   userDetails = new UserDetails(userDetails);
-  userDetails = await storeUserPublicInformation(userDetails, where, lang);
+  userDetails = await _storeUserPublicInformation(userDetails, where, lang);
   await MraUserDetails.update(userDetails, { where });
   const results = await getUserDetails(where, { limit: 1, offset: 0 });
   return results && results[0];
@@ -465,7 +465,7 @@ const updateUserDetails = async (userDetails, where, lang) => {
  * @param {integer} userId - The userId of the user to retrieve.
  * @returns {Object|null} The user object if found, null otherwise.
  */
-const getUserByUserId = async (userId) => {
+export const getUserByUserId = async (userId) => {
   if (isNaN(userId)) {
     return null;
   }
@@ -483,7 +483,7 @@ const getUserByUserId = async (userId) => {
  * @param {string} username - The username of the user to retrieve.
  * @returns {Object|null} The user object if found, null otherwise.
  */
-const getUserByUsername = async (username) => {
+export const getUserByUsername = async (username) => {
   if (!username || !username.trim()) {
     return null;
   }
@@ -505,7 +505,7 @@ const getUserByUsername = async (username) => {
  *                              'offset' specifies the number of user details to skip.
  * @returns {Object[]} An array of ticket objects.
  */
-const getTickets = async (where, pagination, order = [['created_at', 'DESC']]) => {
+export const getTickets = async (where, pagination, order = [['created_at', 'DESC']]) => {
   let { limit, offset } = pagination;
 
   if (isNaN(limit) || limit <= 0)
@@ -572,7 +572,7 @@ const getTickets = async (where, pagination, order = [['created_at', 'DESC']]) =
 * @param {Object} ticket - The ticket object.
 * @returns {Object} The created ticket object.
 */
-const createTicket = async (ticket) => {
+export const createTicket = async (ticket) => {
   const createdTicket = await MraTickets.create(ticket);
 
   if (createdTicket && createdTicket.ticket_id) {
@@ -590,7 +590,7 @@ const createTicket = async (ticket) => {
 * @param {Object} ticket - The new ticket object.
 * @returns {Object} The updated ticket object.
 */
-const updateTicket = async (where, ticket) => {
+export const updateTicket = async (where, ticket) => {
   const [affectedRowCount] = await MraTickets.update(ticket, { where });
 
   if (affectedRowCount > 0) {
@@ -607,7 +607,7 @@ const updateTicket = async (where, ticket) => {
 * @param {object} where - The object containing `where` clauses to specify the search criteria.
 * @returns {boolean} True if the ticket was successfully deleted, otherwise false.
 */
-const deleteTicket = async (where) => {
+export const deleteTicket = async (where) => {
   const deletedRowCount = await MraTickets.destroy({ where });
   return deletedRowCount > 0;
 };
@@ -618,7 +618,7 @@ const deleteTicket = async (where) => {
  * @param {number} customerId - The ID of the customer.
  * @returns {Promise<boolean>} A promise that resolves to true if the customer is private, false otherwise.
  */
-const isPrivateCustomer = async (customerId) => {
+export const isPrivateCustomer = async (customerId) => {
   try {
     if (isNaN(customerId)) {
       return false; // Returns false if no customerId is provided
@@ -649,7 +649,7 @@ const isPrivateCustomer = async (customerId) => {
  *                              'offset' specifies the number of user details to skip.
  * @returns {Promise<Array>} A promise that resolves to an array of similar ticket categories.
  */
-const getTicketCategories = async (ticketTitle, latitude, longitude, customerId, customerTypeId, pagination) => {
+export const getTicketCategories = async (ticketTitle, latitude, longitude, customerId, customerTypeId, pagination) => {
   let { limit, offset } = pagination;
 
   if (isNaN(limit) || limit <= 0)
@@ -771,7 +771,7 @@ const getTicketCategories = async (ticketTitle, latitude, longitude, customerId,
  * @returns {Promise<Array<Object>>} A promise that resolves to an array of countries.
  * @throws {Error} If there is an error fetching countries from the database.
  */
-const getCountries = async (where = {}, pagination) => {
+export const getCountries = async (where = {}, pagination) => {
   let { limit, offset } = pagination;
 
   if (isNaN(limit) || limit <= 0)
@@ -866,7 +866,7 @@ class Address {
  * @returns {Promise<Array<Address>>} A promise that resolves to an array of `Address` instances containing the address data.
  * @throws {Error} If there is an error executing the database function.
  */
-const getAddressData = async (longitude, latitude) => {
+export const getAddressData = async (longitude, latitude) => {
   const results = await sequelize.query(
     `SELECT * FROM mra_function_get_address_data_rs(:longitude, :latitude)`,
     {
@@ -928,7 +928,7 @@ class Location {
  * @returns {Promise<Location>} A promise that resolves to a `Location` instance containing the location data.
  * @throws {Error} If there is an error executing the database function.
  */
-const getLocationData = async (longitude, latitude) => {
+export const getLocationData = async (longitude, latitude) => {
   const results = await sequelize.query(
     `SELECT * FROM mra_function_get_location_data_json(:longitude, :latitude)`,
     {
@@ -958,7 +958,7 @@ const getLocationData = async (longitude, latitude) => {
  * @returns {Promise<Array<{state_id: number, state_name: string}>>} A promise that resolves to an array of state objects.
  * @throws {Error} If there is an error executing the database function.
  */
-const getStatesByCountryCode = async (countryCode) => {
+export const getStatesByCountryCode = async (countryCode) => {
   const results = await sequelize.query(
     `SELECT * FROM mra_function_get_states_by_country_code(:country_iso_code)`,
     {
@@ -984,7 +984,7 @@ const getStatesByCountryCode = async (countryCode) => {
  * @returns {Promise<Array<{state_id: number, state_name: string}>>} A promise that resolves to an array of state objects.
  * @throws {Error} If there is an error executing the database function.
  */
-const getStatesByCountryId = async (countryId) => {
+export const getStatesByCountryId = async (countryId) => {
   const results = await sequelize.query(
     `SELECT * FROM mra_function_get_states_by_country_id(:country_id)`,
     {
@@ -996,7 +996,6 @@ const getStatesByCountryId = async (countryId) => {
   // Return the results directly, as they are already in the desired format
   return results;
 };
-
 
 /**
  * Retrieves cities for a given state in a specified country.
@@ -1012,7 +1011,7 @@ const getStatesByCountryId = async (countryId) => {
  * @returns {Promise<Array<{city_id: number, city_name: string}>>} A promise that resolves to an array of city objects.
  * @throws {Error} If there is an error executing the database function.
  */
-const getCitiesByState = async (countryId, stateId) => {
+export const getCitiesByState = async (countryId, stateId) => {
   const results = await sequelize.query(
     `SELECT * FROM mra_function_get_cities_by_state(:country_id, :state_id)`,
     {
@@ -1024,11 +1023,3 @@ const getCitiesByState = async (countryId, stateId) => {
   // Return the results directly, as they are already in the desired format
   return results;
 };
-
-export {
-  addDateRangeFilter, closeDBConnections, convertSequelizeOperators, createTicket, createUserDetails, deleteAuditLog, deleteTicket, getAddressData, getCitiesByState, getCountries, getGenderTypes, getLocationData, getStatesByCountryCode,
-  getStatesByCountryId, getTicketCategories, getTickets, getUserByUserId,
-  getUserByUsername,
-  getUserDetails, insertAuditLog, isPrivateCustomer, updateAuditLog, updateTicket, updateUserDetails
-};
-

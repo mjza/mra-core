@@ -1,5 +1,7 @@
 import { Router } from 'express';
+
 const router = Router();
+export default router;
 
 import auditLogMiddleware from '../../utils/logger.mjs';
 import geoRoutes from './geoRoutes.mjs';
@@ -14,8 +16,6 @@ router.use(lookupRoutes);
 router.use(userDetailsRoutes);
 router.use(ticketRoutes);
 router.use(geoRoutes);
-
-export default router;
 
 /**
  * @swagger

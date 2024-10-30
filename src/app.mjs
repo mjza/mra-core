@@ -35,7 +35,7 @@ const { checkJSONBody } = validations;
  *                                                   setup to be completed before the app
  *                                                   is returned and used.
  */
-const createApp = async () => {
+export const createApp = async () => {
     const localhost = 'http://localhost:3100';
 
     const app = express();
@@ -212,8 +212,6 @@ const createApp = async () => {
     return app;
 };
 
-export { createApp };
-
 /**
  * Closes all application resources to ensure a clean and graceful shutdown.
  * This function is designed to be called during the application shutdown process,
@@ -233,9 +231,6 @@ export { createApp };
  *                          the resource closure process, it should be caught and
  *                          handled by the caller to avoid unhandled promise rejections.
  */
-const closeApp = async () => {
+export const closeApp = async () => {
     await closeDBConnections();
 }
-
-export { closeApp };
-

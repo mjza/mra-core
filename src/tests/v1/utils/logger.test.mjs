@@ -1,7 +1,7 @@
 import axios from 'axios';
 import http from 'http';
 import https from 'https';
-import { getAuditLogById, getUserByUserId } from '../../../utils/database.mjs';
+import { deleteAuditLog, getAuditLogById, getUserByUserId } from '../../../utils/database.mjs';
 import { generateMockUserRoute } from '../../../utils/generators.mjs';
 import { default as auditLogMiddleware, createEventLog, updateEventLog } from '../../../utils/logger.mjs';
 

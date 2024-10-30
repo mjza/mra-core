@@ -9,6 +9,7 @@ import './config/config.mjs';
  * @type {import('http').Server|null}
  */
 let server = null;
+export default server;
 
 /**
  * Starts the server by initializing the application and listening on a specified port.
@@ -101,5 +102,3 @@ process.on('SIGINT', async () => {
 process.on('SIGTERM', async () => {
   await gracefulShutdown();
 });
-
-export default server;
